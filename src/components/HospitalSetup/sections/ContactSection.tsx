@@ -1,0 +1,251 @@
+import { MapPin, Phone, Mail, Globe } from "lucide-react";
+import { FormField } from "../ui/FormField";
+import type { ClinicContact } from "../../../types/clinic";
+
+const INPUT =
+  "w-full h-9 px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg " +
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 " +
+  "focus:border-teal-500 transition-colors";
+
+const CARD = "bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5";
+
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={CARD}>
+      <div className="flex items-start gap-3 pb-4 border-b border-gray-100">
+        <span className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 shrink-0">
+          <Icon className="w-4 h-4" aria-hidden="true" />
+        </span>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+          {description && (
+            <p className="mt-0.5 text-xs text-gray-500">{description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-5">{children}</div>
+    </div>
+  );
+}
+
+export type ContactData = Omit<ClinicContact, "businessHours">;
+
+interface Props {
+  data: ContactData;
+  onChange: (updates: Partial<ContactData>) => void;
+}
+
+export function ContactSection({ data, onChange }: Props) {
+  const { address } = data;
+
+  function setAddress(updates: Partial<typeof address>) {
+    onChange({ address: { ...address, ...updates } });
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* ── Address ── */}
+      <SectionCard
+        icon={MapPin}
+        title="Physical Address"
+        description="Used on your contact page and in structured data for local SEO."
+      >
+        <FormField label="Street Address" htmlFor="street" required>
+          <input
+            id="street"
+            name="address.street"
+            type="text"
+            value={address.street}
+            onChange={(e) => setAddress({ street: e.target.value })}
+            className={INPUT}
+            placeholder="4820 Burnet Road"
+            autoComplete="street-address"
+          />
+        </FormField>
+
+        <FormField label="Suite / Unit" htmlFor="street2" optional>
+          <input
+            id="street2"
+            name="address.street2"
+            type="text"
+            value={address.street2 ?? ""}
+            onChange={(e) => setAddress({ street2: e.target.value })}
+            className={INPUT}
+            placeholder="Suite 100"
+            autoComplete="address-line2"
+          />
+        </FormField>
+
+        {/* City / State / ZIP — 3-col row */}
+        <div className="grid grid-cols-3 gap-3">
+          <FormField label="City" htmlFor="city" required className="col-span-1">
+            <input
+              id="city"
+              name="address.city"
+              type="text"
+              value={address.city}
+              onChange={(e) => setAddress({ city: e.target.value })}
+              className={INPUT}
+              placeholder="Austin"
+              autoComplete="address-level2"
+            />
+          </FormField>
+
+          <FormField label="State" htmlFor="state" required className="col-span-1">
+            <input
+              id="state"
+              name="address.state"
+              type="text"
+              value={address.state}
+              onChange={(e) => setAddress({ state: e.target.value })}
+              className={INPUT}
+              placeholder="TX"
+              autoComplete="address-level1"
+              maxLength={2}
+            />
+          </FormField>
+
+          <FormField label="ZIP Code" htmlFor="zip" required className="col-span-1">
+            <input
+              id="zip"
+              name="address.zip"
+              type="text"
+              value={address.zip}
+              onChange={(e) => setAddress({ zip: e.target.value })}
+              className={INPUT}
+              placeholder="78756"
+              autoComplete="postal-code"
+              inputMode="numeric"
+              maxLength={10}
+            />
+          </FormField>
+        </div>
+
+        <FormField label="Country" htmlFor="country">
+          <input
+            id="country"
+            name="address.country"
+            type="text"
+            value={address.country}
+            onChange={(e) => setAddress({ country: e.target.value })}
+            className={INPUT}
+            placeholder="United States"
+            autoComplete="country-name"
+          />
+        </FormField>
+      </SectionCard>
+
+      {/* ── Phone & Email ── */}
+      <SectionCard
+        icon={Phone}
+        title="Phone & Email"
+        description="Contact details displayed in your site header, footer, and contact page."
+      >
+        <FormField
+          label="Main Phone"
+          htmlFor="phone"
+          hint="Include country code (e.g. +1 512 555 0182)"
+          required
+        >
+          <div className="relative">
+            <Phone
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              value={data.phone}
+              onChange={(e) => onChange({ phone: e.target.value })}
+              className={`${INPUT} pl-8`}
+              placeholder="+1 (512) 555-0182"
+              autoComplete="tel"
+            />
+          </div>
+        </FormField>
+
+        <FormField
+          label="Emergency / After-Hours Phone"
+          htmlFor="emergencyPhone"
+          hint="Shown in red in the nav bar if provided."
+          optional
+        >
+          <div className="relative">
+            <Phone
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-red-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="emergencyPhone"
+              name="emergencyPhone"
+              type="tel"
+              value={data.emergencyPhone ?? ""}
+              onChange={(e) =>
+                onChange({ emergencyPhone: e.target.value || undefined })
+              }
+              className={`${INPUT} pl-8`}
+              placeholder="+1 (512) 555-0199"
+              autoComplete="tel"
+            />
+          </div>
+        </FormField>
+
+        <FormField label="Email Address" htmlFor="email" required>
+          <div className="relative">
+            <Mail
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={data.email}
+              onChange={(e) => onChange({ email: e.target.value })}
+              className={`${INPUT} pl-8`}
+              placeholder="care@yourClinic.vet"
+              autoComplete="email"
+            />
+          </div>
+        </FormField>
+
+        <FormField
+          label="Website URL"
+          htmlFor="website"
+          hint="Your existing website, if any. Leave blank if this CMS site is your primary."
+          optional
+        >
+          <div className="relative">
+            <Globe
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="website"
+              name="website"
+              type="url"
+              value={data.website ?? ""}
+              onChange={(e) =>
+                onChange({ website: e.target.value || undefined })
+              }
+              className={`${INPUT} pl-8`}
+              placeholder="https://yourClinic.vet"
+              autoComplete="url"
+            />
+          </div>
+        </FormField>
+      </SectionCard>
+    </div>
+  );
+}
