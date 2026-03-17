@@ -136,7 +136,7 @@ function generateExtraction(url: string): Extraction {
   const secColors = ["#F59E0B", "#10B981", "#F97316", "#6366F1", "#EC4899", "#14B8A6", "#FB923C", "#A78BFA"];
   const primaryColor   = colors[seed % colors.length];
   const secondaryColor = secColors[(seed + 3) % secColors.length];
-  const hospitalTypes: HospitalType[] = ["general_practice", "specialty_referral", "emergency", "urgent_care", "mobile"];
+  const hospitalTypes: HospitalType[] = ["general_practice", "specialty_referral", "emergency_critical_care", "shelter_humane", "mobile_clinic"];
   const hospitalType = pick(hospitalTypes);
   const allPetTypes: PetType[] = ["dog", "cat", "bird", "rabbit", "reptile", "small_mammal", "exotic"];
   const petTypes: PetType[] = ["dog", "cat", ...(seed % 3 === 0 ? ["bird" as PetType] : []), ...(seed % 5 === 0 ? ["rabbit" as PetType] : [])];
@@ -165,7 +165,7 @@ function generateExtraction(url: string): Extraction {
     saturday:  { isClosed: false, is24Hours: false, slots: [{ open: "09:00", close: "15:00" }] },
     sunday:    { isClosed: true,  is24Hours: false, slots: [{ open: "10:00", close: "14:00" }] },
   };
-  if (hospitalType === "emergency") {
+  if (hospitalType === "emergency_critical_care") {
     (["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as (keyof WeekSchedule)[])
       .forEach(d => { hours[d] = { isClosed: false, is24Hours: true, slots: [] }; });
   }
@@ -392,8 +392,9 @@ export function WebsiteMigrationPanel({ onClose, onImport }: WebsiteMigrationPan
     setExtraction(prev => {
       if (!prev) return prev;
       const next = { ...prev };
+      const mutable = next as Record<keyof Extraction, Field<unknown> | null>;
       keys.forEach(k => {
-        if (next[k]) next[k] = { ...(next[k] as Field<unknown>), selected } as typeof next[typeof k];
+        if (mutable[k]) mutable[k] = { ...(mutable[k] as Field<unknown>), selected };
       });
       return next;
     });

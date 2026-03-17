@@ -106,6 +106,16 @@ export const ClinicGeneralDetailsSchema = z.object({
 
   /** <meta name="description"> content */
   metaDescription: z.string().max(320).optional(),
+
+  /** SEO settings — stored here so they travel with clinic identity */
+  seo: z.object({
+    metaTitle:       z.string().max(70).optional(),
+    metaDescription: z.string().max(160).optional(),
+    focusKeyword:    z.string().max(80).optional(),
+    ogImageUrl:      UrlSchema.optional(),
+    canonicalUrl:    UrlSchema.optional(),
+    robots:          z.string().default("index,follow"),
+  }).optional(),
 });
 export type ClinicGeneralDetails = z.infer<typeof ClinicGeneralDetailsSchema>;
 
@@ -220,7 +230,7 @@ export type Service = z.infer<typeof ServiceSchema>;
  * Every block shares this base shape.
  * The `type` field drives the discriminated union.
  */
-const BaseBlockSchema = z.object({
+export const BaseBlockSchema = z.object({
   blockId: z.string().uuid(),
   isVisible: z.boolean().default(true),
   /** Render order on the page (0 = first) */
@@ -234,6 +244,7 @@ export const NavLinkSchema = z.object({
   href: z.string(),
   openInNewTab: z.boolean().default(false),
 });
+export type NavLink = z.infer<typeof NavLinkSchema>;
 
 export const NavigationBlockSchema = BaseBlockSchema.extend({
   type: z.literal("navigation"),
@@ -320,6 +331,7 @@ export const TestimonialItemSchema = z.object({
   avatarUrl: UrlSchema.optional(),
   source: z.enum(["google", "yelp", "facebook", "manual"]).default("manual"),
 });
+export type TestimonialItem = z.infer<typeof TestimonialItemSchema>;
 
 export const TestimonialsBlockSchema = BaseBlockSchema.extend({
   type: z.literal("testimonials"),
@@ -519,7 +531,7 @@ export function createDefaultFooterBlock(order = 99): FooterBlock {
   };
 }
 
-export function createEmptyClinicWebsite(): ClinicWebsite {
+export function createEmptyClinicWebsite(): ClinicWebsiteDraft {
   const ts = now();
   return {
     id: uuidv4(),

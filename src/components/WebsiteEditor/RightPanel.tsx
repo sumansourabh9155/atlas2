@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import {
-  Pencil, Globe, GripVertical, Eye, EyeOff, ChevronDown, Check,
+  Pencil, Globe, GripVertical, Eye, EyeOff, ChevronDown,
   Sparkles, Link2, LayoutGrid, MapPin, Trophy, Users, MessageSquare,
   Briefcase, HelpCircle, Mail, Layout, Settings2,
-  Image as ImageIcon, Trash2, Zap, RefreshCw, Tag, AlertCircle,
+  Image as ImageIcon, Trash2, Zap, RefreshCw, Tag,
   CheckCircle2, XCircle,
 } from "lucide-react";
 import { HeroEditor } from "./editors/HeroEditor";

@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { LeftPanel } from "./LeftPanel";
 import { LivePreviewPane } from "./LivePreviewPane";
 import { RightPanel } from "./RightPanel";
 import { mockClinicData } from "../../data/mockClinic";
-import type { HeroBlock } from "../../types/clinic";
 import type { PreviewTheme } from "./LivePreviewPane";
+import { useClinic } from "../../context/ClinicContext";
 import { AIEditorContext, SECTION_LABELS } from "./ai/AIEditorContext";
 import { runToneRewrite, type TonePreset, type AllSectionContent } from "./ai/mockAI";
 import { FillFromScratchWizard } from "./ai/FillFromScratchWizard";
@@ -30,7 +30,7 @@ export interface HeroEditorState {
   badgeText: string;
   backgroundValue: string;
   overlayOpacity: number;
-  layout: "centered" | "left_aligned" | "split_image_right";
+  layout: "centered" | "left_aligned" | "split_image_right" | "split_image_left";
   primaryCta: CtaState;
   secondaryCta: CtaState;
 }
@@ -110,24 +110,26 @@ export type ViewportMode = "desktop" | "tablet" | "mobile";
 
 // ─── Initial states ────────────────────────────────────────────────────────────
 
-const rawHero = mockClinicData.blocks.find((b) => b.type === "hero") as HeroBlock;
+// Safe hero block extraction — handles the case where no hero block exists in mock data
+const rawHeroBlock = mockClinicData.blocks.find((b) => b.type === "hero");
+const heroBlock = rawHeroBlock?.type === "hero" ? rawHeroBlock : null;
 
 const INITIAL_HERO: HeroEditorState = {
-  headline:        rawHero.headline,
-  subheadline:     rawHero.subheadline ?? "",
-  badgeText:       rawHero.badgeText ?? "",
-  backgroundValue: rawHero.backgroundValue ?? "",
-  overlayOpacity:  rawHero.overlayOpacity ?? 0.5,
-  layout:          (rawHero.layout as HeroEditorState["layout"]) ?? "centered",
+  headline:        heroBlock?.headline        ?? "Compassionate Care for Your Beloved Pets",
+  subheadline:     heroBlock?.subheadline     ?? "Trusted veterinary expertise — right in your neighborhood.",
+  badgeText:       heroBlock?.badgeText       ?? "",
+  backgroundValue: heroBlock?.backgroundValue ?? "",
+  overlayOpacity:  heroBlock?.overlayOpacity  ?? 0.5,
+  layout:          (heroBlock?.layout as HeroEditorState["layout"]) ?? "centered",
   primaryCta: {
-    enabled: !!rawHero.primaryCta,
-    label:   rawHero.primaryCta?.label ?? "Book an Appointment",
-    href:    rawHero.primaryCta?.href ?? "#contact",
+    enabled: !!heroBlock?.primaryCta,
+    label:   heroBlock?.primaryCta?.label ?? "Book an Appointment",
+    href:    heroBlock?.primaryCta?.href  ?? "#contact",
   },
   secondaryCta: {
-    enabled: !!rawHero.secondaryCta,
-    label:   rawHero.secondaryCta?.label ?? "Explore Our Services",
-    href:    rawHero.secondaryCta?.href ?? "#services",
+    enabled: !!heroBlock?.secondaryCta,
+    label:   heroBlock?.secondaryCta?.label ?? "Explore Our Services",
+    href:    heroBlock?.secondaryCta?.href  ?? "#services",
   },
 };
 
@@ -193,19 +195,28 @@ interface WebsiteEditorPageProps {
 }
 
 export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps) {
+  // Pull shared clinic identity from context
+  const { clinic: clinicCtx, updateGeneral, updateSEO } = useClinic();
+
   // Layout state
   const [selectedPage, setSelectedPage] = useState("home");
   const [openBlock,    setOpenBlock]    = useState<OpenBlock>("hero");
   const [viewport,     setViewport]     = useState<ViewportMode>("desktop");
 
-  // Theme + brand colors (lifted from LivePreviewPane)
+  // Theme + brand colors — initialise from context, write back on change
   const [theme,          setTheme]          = useState<PreviewTheme>("1");
   const [primaryColor,   setPrimaryColor]   = useState<string>(
-    mockClinicData.general.primaryColor ?? "#0F766E"
+    clinicCtx.general.primaryColor || mockClinicData.general.primaryColor
   );
   const [secondaryColor, setSecondaryColor] = useState<string>(
-    mockClinicData.general.secondaryColor ?? "#F59E0B"
+    clinicCtx.general.secondaryColor || mockClinicData.general.secondaryColor || "#F59E0B"
   );
+
+  // Keep local colors in sync when context changes externally (e.g. after import)
+  useEffect(() => {
+    if (clinicCtx.general.primaryColor)   setPrimaryColor(clinicCtx.general.primaryColor);
+    if (clinicCtx.general.secondaryColor) setSecondaryColor(clinicCtx.general.secondaryColor);
+  }, [clinicCtx.general.primaryColor, clinicCtx.general.secondaryColor]);
 
   // Section content states
   const [heroState,         setHeroState]         = useState<HeroEditorState>(INITIAL_HERO);
@@ -216,7 +227,15 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
   const [joinTeamState,     setJoinTeamState]     = useState<JoinTeamEditorState>(INITIAL_JOIN_TEAM);
   const [faqState,          setFaqState]          = useState<FAQEditorState>(INITIAL_FAQ);
   const [newsletterState,   setNewsletterState]   = useState<NewsletterEditorState>(INITIAL_NEWSLETTER);
-  const [seoState,          setSeoState]          = useState<SEOState>(INITIAL_SEO);
+  // SEO: initialise from context so it survives page reloads
+  const [seoState, setSeoState] = useState<SEOState>({
+    metaTitle:       clinicCtx.seo.metaTitle,
+    metaDescription: clinicCtx.seo.metaDescription,
+    ogImageUrl:      clinicCtx.seo.ogImageUrl,
+    canonicalUrl:    clinicCtx.seo.canonicalUrl,
+    robots:          clinicCtx.seo.robots,
+    focusKeyword:    clinicCtx.seo.focusKeyword,
+  });
 
   // Section order + visibility (lifted so RightPanel DnD drives preview)
   // Type is string[] so dynamic section instance IDs can be included.
@@ -261,13 +280,36 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     setPendingFocusKey(fieldKey);
   }, []);
 
-  // Effective clinic — mutable colors override mock data
+  // Effective clinic — context identity + editor color overrides + mock vets/services/blocks
   const effectiveClinic = useMemo(
     () => ({
       ...mockClinicData,
-      general: { ...mockClinicData.general, primaryColor, secondaryColor },
+      general: {
+        ...mockClinicData.general,
+        // Prefer context identity fields; fall back to mock data defaults
+        name:            clinicCtx.general.name    || mockClinicData.general.name,
+        slug:            clinicCtx.general.slug    || mockClinicData.general.slug,
+        tagline:         clinicCtx.general.tagline ?? mockClinicData.general.tagline,
+        logoUrl:         clinicCtx.general.logoUrl ?? mockClinicData.general.logoUrl,
+        primaryColor,
+        secondaryColor,
+      },
+      taxonomy: {
+        hospitalType: clinicCtx.taxonomy.hospitalType,
+        petTypes: clinicCtx.taxonomy.petTypes.length > 0
+          ? clinicCtx.taxonomy.petTypes
+          : mockClinicData.taxonomy.petTypes,
+      },
+      contact: (clinicCtx.contact.phone || clinicCtx.contact.email)
+        ? {
+            ...mockClinicData.contact,
+            address: { ...mockClinicData.contact.address, ...clinicCtx.contact.address },
+            phone:   clinicCtx.contact.phone  || mockClinicData.contact.phone,
+            email:   clinicCtx.contact.email  || mockClinicData.contact.email,
+          }
+        : mockClinicData.contact,
     }),
-    [primaryColor, secondaryColor]
+    [clinicCtx, primaryColor, secondaryColor]
   );
 
   // ── AI handler ────────────────────────────────────────────────────────────────
@@ -296,7 +338,10 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
   const updateJoinTeam     = useCallback((u: Partial<JoinTeamEditorState>)     => setJoinTeamState(p     => ({ ...p, ...u })), []);
   const updateFaq          = useCallback((u: Partial<FAQEditorState>)          => setFaqState(p          => ({ ...p, ...u })), []);
   const updateNewsletter   = useCallback((u: Partial<NewsletterEditorState>)   => setNewsletterState(p   => ({ ...p, ...u })), []);
-  const updateSeo          = useCallback((u: Partial<SEOState>)                => setSeoState(p          => ({ ...p, ...u })), []);
+  const updateSeo = useCallback((u: Partial<SEOState>) => {
+    setSeoState(p => ({ ...p, ...u }));
+    updateSEO(u); // persist to context → localStorage
+  }, [updateSEO]);
 
   // ── Dynamic section handlers ───────────────────────────────────────────────────
 
@@ -464,8 +509,8 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
         onThemeChange={setTheme}
         primaryColor={primaryColor}
         secondaryColor={secondaryColor}
-        onPrimaryColorChange={setPrimaryColor}
-        onSecondaryColorChange={setSecondaryColor}
+        onPrimaryColorChange={(c) => { setPrimaryColor(c);   updateGeneral({ primaryColor: c });   }}
+        onSecondaryColorChange={(c) => { setSecondaryColor(c); updateGeneral({ secondaryColor: c }); }}
         sectionOrder={sectionOrder}
         sectionVisibility={sectionVisibility}
         onFieldClick={handlePreviewFieldClick}

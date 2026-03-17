@@ -62,9 +62,13 @@ function BlockSwitch({
           </span>
         </section>
       );
-    default:
-      /* Exhaustiveness check — TypeScript will catch missing cases */
+    default: {
+      // Exhaustiveness guard — new block types added to PageBlock union will cause a
+      // compile-time error here, prompting the developer to add a renderer.
+      const _exhaustive: never = block;
+      console.warn("[PreviewRenderer] Unhandled block type:", (_exhaustive as PageBlock).type);
       return null;
+    }
   }
 }
 

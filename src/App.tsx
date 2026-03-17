@@ -3,10 +3,11 @@
  */
 
 import { useState } from "react";
-import { Settings2, Globe, PanelLeft, Check } from "lucide-react";
+import { Settings2, Globe, PanelLeft, Check, Save, Loader2 } from "lucide-react";
 import { HospitalSetupPage } from "./components/HospitalSetup/HospitalSetupPage";
 import { WebsiteEditorPage } from "./components/WebsiteEditor/WebsiteEditorPage";
 import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
+import { ClinicProvider, useClinic } from "./context/ClinicContext";
 
 type Mode = "setup" | "editor" | "domain";
 
@@ -16,8 +17,16 @@ const MODES: { id: Mode; label: string; Icon: React.ElementType }[] = [
   { id: "domain", label: "Domain Management",  Icon: Globe     },
 ];
 
-export default function App() {
+// ─── Inner app uses the clinic context ────────────────────────────────────────
+
+function AppInner() {
   const [mode, setMode] = useState<Mode>("editor");
+  const { clinic, saveStatus, triggerSave, publish } = useClinic();
+
+  const saveBtnLabel =
+    saveStatus === "saving" ? "Saving…"
+    : saveStatus === "saved"  ? "Saved"
+    : "Save as Draft";
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -30,8 +39,11 @@ export default function App() {
           </div>
           <span className="text-sm font-semibold text-gray-900 tracking-tight">Vet CMS</span>
           <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1 h-1 rounded-full bg-amber-500" aria-hidden="true" />
-            Draft
+            <span
+              className={`w-1 h-1 rounded-full ${clinic.status === "published" ? "bg-green-500" : "bg-amber-500"}`}
+              aria-hidden="true"
+            />
+            {clinic.status === "published" ? "Live" : "Draft"}
           </span>
         </div>
 
@@ -82,18 +94,34 @@ export default function App() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2  justify-end">
+        <div className="flex items-center gap-2 justify-end">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]"
+            onClick={triggerSave}
+            disabled={saveStatus === "saving"}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] disabled:opacity-60"
           >
-            Save as Draft
+            {saveStatus === "saving"
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : saveStatus === "saved"
+              ? <Check className="w-3.5 h-3.5 text-green-600" />
+              : <Save className="w-3.5 h-3.5" />
+            }
+            {saveBtnLabel}
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-[#003459] rounded-md hover:bg-[#002845] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1"
+            onClick={publish}
+            disabled={clinic.status === "published"}
+            className={[
+              "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1",
+              clinic.status === "published"
+                ? "bg-green-600 cursor-default"
+                : "bg-[#003459] hover:bg-[#002845]",
+            ].join(" ")}
           >
-            Publish
+            {clinic.status === "published" ? "Published ✓" : "Publish"}
           </button>
         </div>
       </div>
@@ -105,5 +133,15 @@ export default function App() {
         {mode === "domain" && <DomainManagementPage />}
       </div>
     </div>
+  );
+}
+
+// ─── Root wraps everything in the clinic context provider ─────────────────────
+
+export default function App() {
+  return (
+    <ClinicProvider>
+      <AppInner />
+    </ClinicProvider>
   );
 }

@@ -154,6 +154,12 @@ export function createDefaultSection(type: AddableSectionType): DynamicSectionSt
     case "herocentered":  return { type, state: createDefaultHeroCentered()   };
     case "herosplit":     return { type, state: createDefaultHeroSplit()      };
     case "contactsplit":  return { type, state: createDefaultContactSplit()   };
+    default: {
+      // Exhaustiveness guard — adding a new AddableSectionType without a case will
+      // surface a compile-time error here rather than silently returning undefined.
+      const _exhaustive: never = type;
+      throw new Error(`[createDefaultSection] Unhandled section type: ${_exhaustive}`);
+    }
   }
 }
 
@@ -180,63 +186,49 @@ export function getTypeFromInstanceId(instanceId: string): AddableSectionType | 
   return ALL_TYPES.includes(m[1] as AddableSectionType) ? (m[1] as AddableSectionType) : null;
 }
 
-// ─── Meta (labels, emojis, categories) ───────────────────────────────────────
-
-export const DYNAMIC_SECTION_META: Record<AddableSectionType, { label: string; emoji: string; category: string }> = {
-  stats:         { label: "Stats",          emoji: "📊", category: "Sections"   },
-  ctaband:       { label: "CTA Band",       emoji: "📣", category: "Sections"   },
-  gallery:       { label: "Gallery",        emoji: "🖼️",  category: "Sections"   },
-  contactinfo:   { label: "Contact Info",   emoji: "📍", category: "Sections"   },
-  teamspotlight: { label: "Team Spotlight", emoji: "🧑‍⚕️", category: "Sections"   },
-  heading:       { label: "Heading",        emoji: "H",  category: "Typography" },
-  paragraph:     { label: "Paragraph",      emoji: "¶",  category: "Typography" },
-  textblock:     { label: "Text + Image",   emoji: "🖊",  category: "Typography" },
-  blockquote:    { label: "Block Quote",    emoji: "❝",  category: "Typography" },
-  richtext:      { label: "Rich Text",      emoji: "📝", category: "Typography" },
-  empty:         { label: "Empty",          emoji: "□",  category: "Layout"     },
-  twocol:        { label: "2 Column",       emoji: "▥",  category: "Layout"     },
-  threecol:      { label: "3 Column",       emoji: "⊞",  category: "Layout"     },
-  cardgrid2:     { label: "2-Col Cards",    emoji: "🗂",  category: "Cards"      },
-  cardgrid3:     { label: "3-Col Cards",    emoji: "🗃",  category: "Cards"      },
-  teamcards:     { label: "Team Cards",     emoji: "👥", category: "Cards"      },
-  herocentered:  { label: "Hero Centered",  emoji: "✦",  category: "Hero"       },
-  herosplit:     { label: "Hero Split",     emoji: "⬓",  category: "Hero"       },
-  contactsplit:  { label: "Contact + Form", emoji: "✉",  category: "Contact"    },
-};
-
 // ─── LeftPanel Section Definitions ───────────────────────────────────────────
+// Single source of truth for labels, emojis, and categories.
+// DYNAMIC_SECTION_META is derived from this array to eliminate duplication.
 
 export interface AddableSectionDef {
   type: AddableSectionType;
   label: string;
+  emoji: string;
   thumb: React.ReactNode;
   category: string;
 }
 
 export const ADDABLE_SECTION_DEFS: AddableSectionDef[] = [
   // Sections (pre-built composed blocks)
-  { type: "stats",         label: "Stats",          thumb: <StatsThumbnail />,         category: "Sections"   },
-  { type: "ctaband",       label: "CTA Band",        thumb: <CtaBandThumbnail />,       category: "Sections"   },
-  { type: "gallery",       label: "Gallery",         thumb: <GalleryThumbnail />,       category: "Sections"   },
-  { type: "contactinfo",   label: "Contact Info",    thumb: <ContactInfoThumbnail />,   category: "Sections"   },
-  { type: "teamspotlight", label: "Team Spotlight",  thumb: <TeamSpotlightThumbnail />, category: "Sections"   },
+  { type: "stats",         label: "Stats",          emoji: "📊", thumb: <StatsThumbnail />,         category: "Sections"   },
+  { type: "ctaband",       label: "CTA Band",        emoji: "📣", thumb: <CtaBandThumbnail />,       category: "Sections"   },
+  { type: "gallery",       label: "Gallery",         emoji: "🖼️",  thumb: <GalleryThumbnail />,       category: "Sections"   },
+  { type: "contactinfo",   label: "Contact Info",    emoji: "📍", thumb: <ContactInfoThumbnail />,   category: "Sections"   },
+  { type: "teamspotlight", label: "Team Spotlight",  emoji: "🧑‍⚕️", thumb: <TeamSpotlightThumbnail />, category: "Sections"   },
   // Typography
-  { type: "heading",       label: "Heading",         thumb: <HeadingThumbnail />,       category: "Typography" },
-  { type: "paragraph",     label: "Paragraph",       thumb: <ParagraphThumbnail />,     category: "Typography" },
-  { type: "textblock",     label: "Text + Image",    thumb: <TextBlockThumbnail />,     category: "Typography" },
-  { type: "blockquote",    label: "Block Quote",     thumb: <BlockQuoteThumbnail />,    category: "Typography" },
-  { type: "richtext",      label: "Rich Text",       thumb: <RichTextThumbnail />,      category: "Typography" },
+  { type: "heading",       label: "Heading",         emoji: "H",  thumb: <HeadingThumbnail />,       category: "Typography" },
+  { type: "paragraph",     label: "Paragraph",       emoji: "¶",  thumb: <ParagraphThumbnail />,     category: "Typography" },
+  { type: "textblock",     label: "Text + Image",    emoji: "🖊",  thumb: <TextBlockThumbnail />,     category: "Typography" },
+  { type: "blockquote",    label: "Block Quote",     emoji: "❝",  thumb: <BlockQuoteThumbnail />,    category: "Typography" },
+  { type: "richtext",      label: "Rich Text",       emoji: "📝", thumb: <RichTextThumbnail />,      category: "Typography" },
   // Layout
-  { type: "empty",         label: "Empty",           thumb: <EmptyThumbnail />,         category: "Layout"     },
-  { type: "twocol",        label: "2 Column",        thumb: <TwoColThumbnail />,        category: "Layout"     },
-  { type: "threecol",      label: "3 Column",        thumb: <ThreeColThumbnail />,      category: "Layout"     },
+  { type: "empty",         label: "Empty",           emoji: "□",  thumb: <EmptyThumbnail />,         category: "Layout"     },
+  { type: "twocol",        label: "2 Column",        emoji: "▥",  thumb: <TwoColThumbnail />,        category: "Layout"     },
+  { type: "threecol",      label: "3 Column",        emoji: "⊞",  thumb: <ThreeColThumbnail />,      category: "Layout"     },
   // Cards
-  { type: "cardgrid2",     label: "2-Col Cards",     thumb: <CardGrid2Thumbnail />,     category: "Cards"      },
-  { type: "cardgrid3",     label: "3-Col Cards",     thumb: <CardGrid3Thumbnail />,     category: "Cards"      },
-  { type: "teamcards",     label: "Team Cards",      thumb: <TeamCardsThumbnail />,     category: "Cards"      },
+  { type: "cardgrid2",     label: "2-Col Cards",     emoji: "🗂",  thumb: <CardGrid2Thumbnail />,     category: "Cards"      },
+  { type: "cardgrid3",     label: "3-Col Cards",     emoji: "🗃",  thumb: <CardGrid3Thumbnail />,     category: "Cards"      },
+  { type: "teamcards",     label: "Team Cards",      emoji: "👥", thumb: <TeamCardsThumbnail />,     category: "Cards"      },
   // Hero Sections
-  { type: "herocentered",  label: "Hero Centered",   thumb: <HeroCenteredThumbnail />,  category: "Hero"       },
-  { type: "herosplit",     label: "Hero Split",      thumb: <HeroSplitThumbnail />,     category: "Hero"       },
+  { type: "herocentered",  label: "Hero Centered",   emoji: "✦",  thumb: <HeroCenteredThumbnail />,  category: "Hero"       },
+  { type: "herosplit",     label: "Hero Split",      emoji: "⬓",  thumb: <HeroSplitThumbnail />,     category: "Hero"       },
   // Contact
-  { type: "contactsplit",  label: "Contact + Form",  thumb: <ContactSplitThumbnail />,  category: "Contact"    },
+  { type: "contactsplit",  label: "Contact + Form",  emoji: "✉",  thumb: <ContactSplitThumbnail />,  category: "Contact"    },
 ];
+
+// ─── Meta (labels, emojis, categories) ───────────────────────────────────────
+// Derived from ADDABLE_SECTION_DEFS — update there, not here.
+
+export const DYNAMIC_SECTION_META = Object.fromEntries(
+  ADDABLE_SECTION_DEFS.map((d) => [d.type, { label: d.label, emoji: d.emoji, category: d.category }])
+) as Record<AddableSectionType, { label: string; emoji: string; category: string }>;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Type, Tags, MapPin, Clock,
   CheckCircle2, Circle, Save, ChevronRight,
@@ -10,13 +10,14 @@ import { ContactSection, type ContactData } from "./sections/ContactSection";
 import { OperatingHoursSection } from "./sections/OperatingHoursSection";
 import { WebsiteMigrationPanel, type ImportPayload } from "./WebsiteMigrationPanel";
 import type { WeekSchedule } from "./ui/OperatingHoursEditor";
-import type { HospitalType, PetType } from "../../types/clinic";
+import { useClinic } from "../../context/ClinicContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SectionId = "basic" | "taxonomy" | "contact" | "hours";
 
-interface FormState {
+/** View-layer form shape — derived from context, passed to section components unchanged. */
+interface FormView {
   basic: BasicInfoData;
   taxonomy: TaxonomyData;
   contact: ContactData;
@@ -59,61 +60,29 @@ const SECTIONS: {
 
 // ─── Completion heuristics ────────────────────────────────────────────────────
 
-function isSectionComplete(id: SectionId, state: FormState): boolean {
+function isSectionComplete(id: SectionId, form: FormView): boolean {
   switch (id) {
     case "basic":
       return (
-        state.basic.general.name.trim().length >= 2 &&
-        state.basic.general.slug.length >= 2 &&
-        /^#[0-9A-Fa-f]{6}$/.test(state.basic.general.primaryColor)
+        form.basic.general.name.trim().length >= 2 &&
+        form.basic.general.slug.length >= 2 &&
+        /^#[0-9A-Fa-f]{6}$/.test(form.basic.general.primaryColor)
       );
     case "taxonomy":
-      return state.taxonomy.petTypes.length > 0;
+      return form.taxonomy.petTypes.length > 0;
     case "contact":
       return (
-        state.contact.address.street.trim().length > 0 &&
-        state.contact.address.city.trim().length > 0 &&
-        state.contact.phone.trim().length > 0 &&
-        state.contact.email.trim().length > 0
+        form.contact.address.street.trim().length > 0 &&
+        form.contact.address.city.trim().length > 0 &&
+        form.contact.phone.trim().length > 0 &&
+        form.contact.email.trim().length > 0
       );
     case "hours":
-      return state.hours !== undefined;
+      return form.hours !== undefined;
     default:
       return false;
   }
 }
-
-// ─── Default state ────────────────────────────────────────────────────────────
-
-const INITIAL_STATE: FormState = {
-  basic: {
-    general: {
-      name: "",
-      slug: "",
-      primaryColor: "#0F766E",
-      secondaryColor: "#F59E0B",
-      logoUrl: undefined,
-      tagline: "",
-      metaDescription: "",
-    },
-    hospitalType: "general_practice" as HospitalType,
-  },
-  taxonomy: {
-    petTypes: [] as PetType[],
-  },
-  contact: {
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "United States",
-    },
-    phone: "",
-    email: "",
-  },
-  hours: undefined,
-};
 
 // ─── SaveButton ───────────────────────────────────────────────────────────────
 
@@ -164,147 +133,119 @@ function SaveButton({
 // ─── HospitalSetupPage ────────────────────────────────────────────────────────
 
 export function HospitalSetupPage() {
-  const [activeSection, setActiveSection]   = useState<SectionId>("basic");
-  const [form, setForm]                     = useState<FormState>(INITIAL_STATE);
-  const [saveState, setSaveState]           = useState<SaveState>("idle");
-  const [lastSaved, setLastSaved]           = useState<Date | null>(null);
-  const [migrationOpen, setMigrationOpen]   = useState(false);
+  const {
+    clinic,
+    updateGeneral,
+    updateTaxonomy,
+    updateContact,
+    updateHours,
+    saveStatus,
+    triggerSave,
+  } = useClinic();
 
-  // ── Patch helpers ──────────────────────────────────────────────────────────
+  const [activeSection, setActiveSection] = useState<SectionId>("basic");
+  const [lastSaved, setLastSaved]         = useState<Date | null>(null);
+  const [migrationOpen, setMigrationOpen] = useState(false);
+
+  // Track last-saved timestamp when the global save succeeds
+  useEffect(() => {
+    if (saveStatus === "saved") setLastSaved(new Date());
+  }, [saveStatus]);
+
+  // ── Derive the form view from context (sections still receive the same props) ──
+
+  const form: FormView = {
+    basic: {
+      general: {
+        name:            clinic.general.name,
+        slug:            clinic.general.slug,
+        primaryColor:    clinic.general.primaryColor,
+        secondaryColor:  clinic.general.secondaryColor,
+        logoUrl:         clinic.general.logoUrl,
+        tagline:         clinic.general.tagline ?? "",
+        metaDescription: clinic.general.metaDescription ?? "",
+      },
+      hospitalType: clinic.taxonomy.hospitalType,
+    },
+    taxonomy: {
+      petTypes: clinic.taxonomy.petTypes,
+    },
+    contact: {
+      address: { ...clinic.contact.address },
+      phone:   clinic.contact.phone,
+      email:   clinic.contact.email,
+    },
+    hours: clinic.hours,
+  };
+
+  // ── Patch helpers — write straight to context ─────────────────────────────
 
   const patchBasic = useCallback((updates: Partial<BasicInfoData>) => {
-    setForm((prev) => {
-      const next = { ...prev, basic: { ...prev.basic, ...updates } };
-      // Keep slug in sync with name unless it was already customised
-      if (updates.general?.name !== undefined) {
-        const autoSlug = toSlug(updates.general.name);
-        if (!next.basic.general.slug || next.basic.general.slug === toSlug(prev.basic.general.name)) {
-          next.basic.general.slug = autoSlug;
-        }
-      }
-      return next;
-    });
-    setSaveState("idle");
-  }, []);
+    if (updates.general) {
+      const g = updates.general;
+      // Auto-sync slug when name changes (unless slug was manually set)
+      const autoSlug =
+        g.name !== undefined &&
+        (!clinic.general.slug || clinic.general.slug === toSlug(clinic.general.name ?? ""))
+          ? toSlug(g.name)
+          : g.slug;
+      updateGeneral({ ...g, ...(autoSlug !== undefined ? { slug: autoSlug } : {}) });
+    }
+    if (updates.hospitalType !== undefined) {
+      updateTaxonomy({ hospitalType: updates.hospitalType });
+    }
+  }, [clinic.general, updateGeneral, updateTaxonomy]);
 
   const patchTaxonomy = useCallback((updates: Partial<TaxonomyData>) => {
-    setForm((prev) => ({ ...prev, taxonomy: { ...prev.taxonomy, ...updates } }));
-    setSaveState("idle");
-  }, []);
+    if (updates.petTypes !== undefined) updateTaxonomy({ petTypes: updates.petTypes });
+  }, [updateTaxonomy]);
 
   const patchContact = useCallback((updates: Partial<ContactData>) => {
-    setForm((prev) => ({ ...prev, contact: { ...prev.contact, ...updates } }));
-    setSaveState("idle");
-  }, []);
+    updateContact(updates);
+  }, [updateContact]);
 
   const patchHours = useCallback((hours: WeekSchedule) => {
-    setForm((prev) => ({ ...prev, hours }));
-    setSaveState("idle");
-  }, []);
+    updateHours(hours);
+  }, [updateHours]);
 
-  // ── Website migration import ────────────────────────────────────────────────
+  // ── Website migration import ───────────────────────────────────────────────
 
   const handleImport = useCallback((payload: ImportPayload) => {
-    setForm(prev => {
-      let next = { ...prev };
-
-      if (payload.basic) {
-        const generalPatch = payload.basic.general ?? {};
-        next = {
-          ...next,
-          basic: {
-            ...next.basic,
-            ...(payload.basic.hospitalType ? { hospitalType: payload.basic.hospitalType } : {}),
-            general: {
-              ...next.basic.general,
-              ...generalPatch,
-              // Auto-derive slug from imported name unless already customised
-              ...(generalPatch.name
-                ? { slug: next.basic.general.slug || toSlug(generalPatch.name) }
-                : {}),
-            },
-          },
-        };
-      }
-
-      if (payload.taxonomy) {
-        next = { ...next, taxonomy: { ...next.taxonomy, ...payload.taxonomy } };
-      }
-
-      if (payload.contact) {
-        next = {
-          ...next,
-          contact: {
-            ...next.contact,
-            ...payload.contact,
-            address: { ...next.contact.address, ...(payload.contact.address ?? {}) },
-          },
-        };
-      }
-
-      if (payload.hours) {
-        next = { ...next, hours: payload.hours };
-      }
-
-      return next;
-    });
-    setSaveState("idle");
+    if (payload.basic) {
+      const g = payload.basic.general ?? {};
+      const hasName = !!g.name;
+      const autoSlug =
+        hasName && (!clinic.general.slug || clinic.general.slug === toSlug(clinic.general.name ?? ""))
+          ? toSlug(g.name!)
+          : undefined;
+      updateGeneral({ ...g, ...(autoSlug ? { slug: autoSlug } : {}) });
+      if (payload.basic.hospitalType) updateTaxonomy({ hospitalType: payload.basic.hospitalType });
+    }
+    if (payload.taxonomy) updateTaxonomy(payload.taxonomy);
+    if (payload.contact)  updateContact(payload.contact);
+    if (payload.hours)    updateHours(payload.hours);
     setMigrationOpen(false);
-  }, []);
+  }, [clinic.general, updateGeneral, updateTaxonomy, updateContact, updateHours]);
 
-  // ── Save ───────────────────────────────────────────────────────────────────
-
-  async function handleSave() {
-    setSaveState("saving");
-    // Simulate API round-trip — wire to your actual endpoint here
-    await new Promise((r) => setTimeout(r, 900));
-    setSaveState("saved");
-    setLastSaved(new Date());
-    setTimeout(() => setSaveState("idle"), 2500);
-  }
-
-  // ── Active section renderer ────────────────────────────────────────────────
+  // ── Active section renderer ───────────────────────────────────────────────
 
   function renderSection() {
     switch (activeSection) {
       case "basic":
-        return (
-          <BasicInfoSection
-            data={form.basic}
-            onChange={patchBasic}
-          />
-        );
+        return <BasicInfoSection data={form.basic} onChange={patchBasic} />;
       case "taxonomy":
-        return (
-          <TaxonomySection
-            data={form.taxonomy}
-            onChange={patchTaxonomy}
-          />
-        );
+        return <TaxonomySection data={form.taxonomy} onChange={patchTaxonomy} />;
       case "contact":
-        return (
-          <ContactSection
-            data={form.contact}
-            onChange={patchContact}
-          />
-        );
+        return <ContactSection data={form.contact} onChange={patchContact} />;
       case "hours":
-        return (
-          <OperatingHoursSection
-            value={form.hours}
-            onChange={patchHours}
-          />
-        );
+        return <OperatingHoursSection value={form.hours} onChange={patchHours} />;
     }
   }
 
-  const completedCount = SECTIONS.filter((s) =>
-    isSectionComplete(s.id, form)
-  ).length;
+  const completedCount = SECTIONS.filter((s) => isSectionComplete(s.id, form)).length;
+  const activeConfig   = SECTIONS.find((s) => s.id === activeSection)!;
 
-  const activeConfig = SECTIONS.find((s) => s.id === activeSection)!;
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-screen overflow-hidden bg-white font-sans antialiased">
@@ -510,7 +451,7 @@ export function HospitalSetupPage() {
               ) : null;
             })()}
 
-            <SaveButton state={saveState} onClick={handleSave} />
+            <SaveButton state={saveStatus} onClick={triggerSave} />
           </div>
         </header>
 

@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, createContext, useContext } from "react";
 import {
   Phone, MapPin, Clock, ChevronDown, ChevronRight, ChevronUp, Star,
   Globe, Calendar, Monitor, FileText, CreditCard,
@@ -47,21 +47,25 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-const NAVY  = "#1B2B4B";
-const RED   = "#C1121F";
-const AMBER = "#F59E0B";
+// ─── Template color context ───────────────────────────────────────────────────
+// Provides primaryColor + secondaryColor to all sub-components without prop-drilling.
+
+interface TemplateColors { primary: string; secondary: string }
+const TemplateColorsCtx = createContext<TemplateColors>({ primary: "#1B2B4B", secondary: "#C1121F" });
+const useColors = () => useContext(TemplateColorsCtx);
 
 // ─── TopBanner ────────────────────────────────────────────────────────────────
 
 function TopBanner() {
+  const { primary, secondary } = useColors();
   return (
     <div
       className="flex items-center justify-center gap-2 px-4 py-2 text-xs"
-      style={{ background: NAVY, color: "rgba(255,255,255,0.85)" }}
+      style={{ background: primary, color: "rgba(255,255,255,0.85)" }}
     >
       <span
         className="w-2 h-2 rounded-full shrink-0"
-        style={{ background: AMBER }}
+        style={{ background: secondary }}
         aria-hidden="true"
       />
       <span>Now Open &amp; Taking Patients</span>
@@ -81,6 +85,7 @@ function TopBanner() {
 function Navbar({
   clinic, isDark,
 }: { clinic: ClinicWebsite; isDark: boolean }) {
+  const { primary, secondary } = useColors();
   const name = clinic.general.name;
   const firstWord = name.split(" ")[0].toUpperCase();
 
@@ -106,13 +111,13 @@ function Navbar({
         <div className="flex items-center gap-1.5 shrink-0">
           <div
             className="w-7 h-7 flex items-center justify-center rounded-sm shrink-0"
-            style={{ background: RED }}
+            style={{ background: secondary }}
             aria-hidden="true"
           >
-            <span className="text-white font-black text-xs">A</span>
+            <span className="text-white font-black text-xs">{firstWord[0] ?? "V"}</span>
           </div>
           <div className="leading-none">
-            <p className="text-[11px] font-black tracking-tight" style={{ color: isDark ? "#f1f5f9" : NAVY }}>
+            <p className="text-[11px] font-black tracking-tight" style={{ color: isDark ? "#f1f5f9" : primary }}>
               {firstWord}
             </p>
             <p className="text-[7px] font-semibold tracking-widest uppercase" style={{ color: isDark ? "#475569" : "#9ca3af" }}>
@@ -128,7 +133,7 @@ function Navbar({
               key={label}
               href="#"
               className="flex items-center gap-0.5 text-xs font-medium whitespace-nowrap"
-              style={{ color: label === "Home" ? RED : isDark ? "#cbd5e1" : "#374151" }}
+              style={{ color: label === "Home" ? secondary : isDark ? "#cbd5e1" : "#374151" }}
             >
               {label}
               {dropdown && <ChevronDown className="w-3 h-3 opacity-50" aria-hidden="true" />}
@@ -149,13 +154,13 @@ function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           <button
             className="px-3.5 py-1.5 rounded-md text-xs font-bold border-2 transition-colors"
-            style={{ borderColor: RED, color: RED, background: "transparent" }}
+            style={{ borderColor: secondary, color: secondary, background: "transparent" }}
           >
             Emergency
           </button>
           <button
             className="px-3.5 py-1.5 rounded-md text-xs font-bold text-white"
-            style={{ background: NAVY }}
+            style={{ background: primary }}
           >
             Book Appointment
           </button>
@@ -171,10 +176,10 @@ function Navbar({
           color: isDark ? "#94a3b8" : "#374151",
         }}
       >
-        <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: isDark ? "#64748b" : NAVY }} aria-hidden="true" />
+        <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: isDark ? "#64748b" : primary }} aria-hidden="true" />
         <span>
           Next available:{" "}
-          <strong style={{ color: isDark ? "#e2e8f0" : NAVY }}>Today, 3:00 PM</strong>
+          <strong style={{ color: isDark ? "#e2e8f0" : primary }}>Today, 3:00 PM</strong>
         </span>
         <button
           className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-bold shrink-0"
@@ -199,6 +204,7 @@ function HeroSection({
   isDark: boolean;
   compact: boolean;
 }) {
+  const { primary, secondary } = useColors();
   const name      = clinic.general.name;
   const firstWord = name.split(" ")[0].toUpperCase();
   const address   = clinic.contact?.address;
@@ -206,8 +212,8 @@ function HeroSection({
   const emergency = clinic.contact?.emergencyPhone;
   const hasImage  = heroState.backgroundValue?.trim().length > 0;
 
-  // Hero left is always dark regardless of theme
-  const HERO_BG = isDark ? "#060e1e" : NAVY;
+  // Hero left panel uses primary color darkened for contrast
+  const HERO_BG = isDark ? "#060e1e" : primary;
 
   return (
     <section aria-label="Hero">
@@ -222,12 +228,12 @@ function HeroSection({
           <div className="flex items-center gap-2 mb-5">
             <div
               className="w-5 h-5 flex items-center justify-center rounded-sm shrink-0"
-              style={{ background: RED }}
+              style={{ background: secondary }}
               aria-hidden="true"
             >
-              <span className="text-white font-black text-[9px]">A</span>
+              <span className="text-white font-black text-[9px]">{firstWord[0] ?? "V"}</span>
             </div>
-            <span className="text-[10px] font-black tracking-widest" style={{ color: RED }}>
+            <span className="text-[10px] font-black tracking-widest" style={{ color: secondary }}>
               {firstWord}
             </span>
             <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>· · ·</span>
@@ -262,7 +268,7 @@ function HeroSection({
                 style={{
                   width:  i === 0 ? "22px" : "7px",
                   height: "7px",
-                  background: i === 0 ? AMBER : "rgba(255,255,255,0.22)",
+                  background: i === 0 ? secondary : "rgba(255,255,255,0.22)",
                 }}
               />
             ))}
@@ -373,6 +379,7 @@ const QUICK_LINKS = [
 ];
 
 function QuickLinks({ isDark }: { isDark: boolean }) {
+  const { secondary } = useColors();
   return (
     <div
       className="px-6 py-4"
@@ -395,9 +402,9 @@ function QuickLinks({ isDark }: { isDark: boolean }) {
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: isDark ? "rgba(193,18,31,0.12)" : "rgba(193,18,31,0.08)" }}
+              style={{ background: hexToRgba(secondary, isDark ? 0.12 : 0.08) }}
             >
-              <Icon className="w-4.5 h-4.5" style={{ color: RED }} aria-hidden="true" />
+              <Icon className="w-4.5 h-4.5" style={{ color: secondary }} aria-hidden="true" />
             </div>
             <span
               className="text-[10px] font-medium flex items-center gap-0.5 whitespace-nowrap"
@@ -435,7 +442,8 @@ function ServicesSection({
   gridColumns?: number;
 }) {
   const city      = clinic.contact?.address?.city ?? "your area";
-  const iconColor = secondaryColor || AMBER;
+  const { secondary } = useColors();
+  const iconColor = secondaryColor || secondary;
   const visibleServices = clinic.services.filter(s => s.isVisible).sort((a, b) => a.order - b.order);
   const cols = compact ? 2 : (gridColumns ?? 4);
 
@@ -524,6 +532,7 @@ function LocationsMap({
   showBookingWidget?: boolean;
   nextAvailable?: string;
 }) {
+  const { secondary } = useColors();
   const city  = clinic.contact?.address?.city ?? "Ansonia";
   const phone = clinic.contact?.phone ?? "812-283-4910";
   const email = clinic.contact?.email ?? "info@company.com";
@@ -713,9 +722,9 @@ function LocationsMap({
                       <div key={text} className="flex items-center gap-2">
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: hexToRgba(AMBER, 0.15) }}
+                          style={{ background: hexToRgba(secondary, 0.15) }}
                         >
-                          <Icon className="w-3 h-3" style={{ color: AMBER }} aria-hidden="true" />
+                          <Icon className="w-3 h-3" style={{ color: secondary }} aria-hidden="true" />
                         </div>
                         <a href="#" className="text-[11px] underline" style={{ color: isDark ? "#94a3b8" : "#374151" }}>
                           {text}
@@ -734,15 +743,15 @@ function LocationsMap({
                     { day: "Sat - Sun:", hrs: "24 hour" },
                   ].map(({ day, hrs }) => (
                     <div key={day} className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-medium" style={{ color: AMBER }}>{day}</span>
+                      <span className="text-[11px] font-medium" style={{ color: secondary }}>{day}</span>
                       <span className="text-[11px]" style={{ color: isDark ? "#94a3b8" : "#374151" }}>{hrs}</span>
                     </div>
                   ))}
                   <div
                     className="px-3 py-1.5 rounded-lg text-center text-[11px] font-bold mt-2"
                     style={{
-                      background: hexToRgba(AMBER, 0.18),
-                      color: isDark ? AMBER : "#92400e",
+                      background: hexToRgba(secondary, 0.18),
+                      color: isDark ? secondary : "#92400e",
                     }}
                   >
                     24/7 + Including Holidays
@@ -760,6 +769,7 @@ function LocationsMap({
 // ─── AwardsSection ────────────────────────────────────────────────────────────
 
 function AwardsSection({ isDark }: { isDark: boolean }) {
+  const { secondary } = useColors();
   return (
     <section
       className="px-6 py-10"
@@ -783,7 +793,7 @@ function AwardsSection({ isDark }: { isDark: boolean }) {
             <div
               key={i}
               className="w-20 h-20 rounded-xl flex flex-col items-center justify-center gap-1.5 text-center p-2"
-              style={{ background: RED }}
+              style={{ background: secondary }}
             >
               <p className="text-white font-black text-[8px] tracking-widest leading-tight">
                 AAHA<br />ACCREDITED
@@ -812,6 +822,7 @@ function TeamSection({
   sectionTitle?: string;
   sectionSubtitle?: string;
 }) {
+  const { primary } = useColors();
   const vets = clinic.veterinarians.filter(v => v.isVisible).sort((a, b) => a.order - b.order);
   const displayed = vets.length < 8
     ? [...vets, ...vets, ...vets, ...vets].slice(0, 8)
@@ -851,7 +862,7 @@ function TeamSection({
           </div>
           <button
             className="shrink-0 px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm"
-            style={{ background: NAVY }}
+            style={{ background: primary }}
           >
             View Full Team
           </button>
@@ -962,6 +973,7 @@ function TestimonialsSection({
   totalReviews?: string;
   rating?: string;
 }) {
+  const { secondary } = useColors();
   const ratingNum = parseFloat(rating ?? "4.7");
   const filledStars = Math.round(ratingNum);
 
@@ -994,7 +1006,7 @@ function TestimonialsSection({
             </p>
             <div className="flex items-center gap-0.5 mt-1 justify-end">
               {[0, 1, 2, 3, 4].map(i => (
-                <Star key={i} className="w-3.5 h-3.5 fill-current" style={{ color: i < filledStars ? AMBER : "#e5e7eb" }} aria-hidden="true" />
+                <Star key={i} className="w-3.5 h-3.5 fill-current" style={{ color: i < filledStars ? secondary : "#e5e7eb" }} aria-hidden="true" />
               ))}
               <span className="text-sm font-bold ml-1" style={{ color: isDark ? "#f1f5f9" : "#111827" }}>{rating || "4.7"}</span>
             </div>
@@ -1032,7 +1044,7 @@ function TestimonialsSection({
                 </div>
                 <div className="flex gap-0.5">
                   {Array.from({ length: r.rating }).map((_, j) => (
-                    <Star key={j} className="w-3 h-3 fill-current" style={{ color: AMBER }} aria-hidden="true" />
+                    <Star key={j} className="w-3 h-3 fill-current" style={{ color: secondary }} aria-hidden="true" />
                   ))}
                 </div>
               </div>
@@ -1079,6 +1091,7 @@ function JoinTeamSection({
   description?: string;
   ctaLabel?: string;
 }) {
+  const { primary } = useColors();
   return (
     <section
       style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "#f0f0f2"}` }}
@@ -1113,7 +1126,7 @@ function JoinTeamSection({
           </p>
           <button
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold text-white w-fit"
-            style={{ background: NAVY }}
+            style={{ background: primary }}
           >
             {ctaLabel || "View Careers"}
           </button>
@@ -1172,6 +1185,7 @@ function FAQSection({
   sectionTitle?: string;
   subtitle?: string;
 }) {
+  const { secondary } = useColors();
   const [open, setOpen] = useState<number | null>(0);
 
   return (
@@ -1237,7 +1251,7 @@ function FAQSection({
                   {open === i ? (
                     <ChevronUp
                       className="w-4 h-4 shrink-0"
-                      style={{ color: AMBER }}
+                      style={{ color: secondary }}
                       aria-hidden="true"
                     />
                   ) : (
@@ -1301,6 +1315,7 @@ function NewsletterSection({
   promptText?: string;
   ctaLabel?: string;
 }) {
+  const { primary } = useColors();
   return (
     <section
       className="px-6 py-8"
@@ -1334,7 +1349,7 @@ function NewsletterSection({
           />
           <button
             className="h-10 px-5 rounded-lg text-sm font-bold text-white shrink-0"
-            style={{ background: NAVY }}
+            style={{ background: primary }}
           >
             {ctaLabel || "Subscribe Now"}
           </button>
@@ -1349,6 +1364,7 @@ function NewsletterSection({
 function Footer({
   clinic, isDark,
 }: { clinic: ClinicWebsite; isDark: boolean }) {
+  const { primary, secondary } = useColors();
   const { name } = clinic.general;
   const addr  = clinic.contact?.address;
   const phone = clinic.contact?.phone  ?? "812-283-4910";
@@ -1367,7 +1383,7 @@ function Footer({
 
           {/* Col 1: Brand */}
           <div>
-            <p className="text-sm font-bold mb-3" style={{ color: AMBER }}>
+            <p className="text-sm font-bold mb-3" style={{ color: secondary }}>
               {name}
             </p>
             {addr && (
@@ -1391,7 +1407,7 @@ function Footer({
                 { Icon: Facebook, text: "Facebook" },
               ].map(({ Icon, text }) => (
                 <div key={text} className="flex items-center gap-1.5">
-                  <Icon className="w-3 h-3 shrink-0" style={{ color: AMBER }} aria-hidden="true" />
+                  <Icon className="w-3 h-3 shrink-0" style={{ color: secondary }} aria-hidden="true" />
                   <a
                     href="#"
                     className="text-xs underline"
@@ -1414,15 +1430,15 @@ function Footer({
               { day: "Sat - Sun:", hrs: "Closed" },
             ].map(({ day, hrs }) => (
               <div key={day} className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium" style={{ color: AMBER }}>{day}</span>
+                <span className="text-xs font-medium" style={{ color: secondary }}>{day}</span>
                 <span className="text-xs" style={{ color: isDark ? "#64748b" : "#6b7280" }}>{hrs}</span>
               </div>
             ))}
             <div
               className="px-3 py-1.5 rounded-lg text-xs font-bold text-center mt-2 w-fit"
               style={{
-                background: hexToRgba(AMBER, 0.18),
-                color: isDark ? AMBER : "#92400e",
+                background: hexToRgba(secondary, 0.18),
+                color: isDark ? secondary : "#92400e",
               }}
             >
               24/7 + Including Holidays
@@ -1724,6 +1740,7 @@ export function ClinicHomepageTemplate({
   const dType = draggingTemplateType ?? undefined;
 
   return (
+    <TemplateColorsCtx.Provider value={{ primary: primaryColor, secondary: secondaryColor }}>
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", color: isDark ? "#e2e8f0" : "#1a1a1a" }}>
       <TopBanner />
       <Navbar clinic={clinic} isDark={isDark} />
@@ -1778,5 +1795,6 @@ export function ClinicHomepageTemplate({
         );
       })}
     </div>
+    </TemplateColorsCtx.Provider>
   );
 }

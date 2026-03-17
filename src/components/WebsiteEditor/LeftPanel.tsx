@@ -5,7 +5,7 @@ import {
   Home, FileText, PlayCircle, HelpCircle,
   Users, Briefcase, CalendarCheck, Download,
   MessageSquare, CreditCard, Newspaper,
-  Mail, Map, Star, MoreVertical, EyeOff,
+  Mail, Map as MapIcon, Star, MoreVertical, EyeOff,
   Phone, Camera, Navigation2,
 } from "lucide-react";
 import type { AddableSectionType } from "./sections";
@@ -421,7 +421,13 @@ function SectionTemplatesTab({ onTemplateDragStart, onTemplateDragEnd, onAddSect
                           "display:flex;align-items:center;gap:6px;",
                           "pointer-events:none;font-family:Inter,system-ui,sans-serif;",
                         ].join("");
-                        ghost.innerHTML = `<span style="font-size:14px">+</span><span>${def.label}</span>`;
+                        const plus = document.createElement("span");
+                        plus.style.fontSize = "14px";
+                        plus.textContent = "+";
+                        const lbl = document.createElement("span");
+                        lbl.textContent = def.label;
+                        ghost.appendChild(plus);
+                        ghost.appendChild(lbl);
                         document.body.appendChild(ghost);
                         e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                         requestAnimationFrame(() => { if (ghost.parentNode) document.body.removeChild(ghost); });
