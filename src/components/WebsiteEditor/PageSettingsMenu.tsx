@@ -3,6 +3,7 @@
 // Uses fixed positioning so it escapes the overflow:hidden LeftPanel container.
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Navigation2, GitBranch, EyeOff, Copy, Trash2,
   ChevronDown, Check, CornerDownRight,
@@ -103,7 +104,7 @@ export function PageSettingsMenu({
 
   const parentLabel = topPages.find(p => p.id === page.parentId)?.label;
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       style={{ position: "fixed", top, left, width: MENU_W, zIndex: 9999 }}
@@ -243,6 +244,7 @@ export function PageSettingsMenu({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -5,6 +5,7 @@
 // Saves back to the parent as a flat ManagedPage[] with updated navMode/parentId.
 
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   X, Search, Plus, Eye, EyeOff, Trash2,
   ChevronRight, ChevronDown, GripVertical,
@@ -331,7 +332,7 @@ export function NavigationManager({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -340,7 +341,7 @@ export function NavigationManager({
       />
 
       {/* Modal */}
-      <div className="fixed z-[201] inset-x-4 top-[6%] bottom-[6%] max-w-[780px] mx-auto bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/60">
+      <div className="fixed z-[201] inset-x-4 top-[10%] bottom-[6%] max-w-[780px] mx-auto bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/60">
 
         {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
@@ -363,7 +364,7 @@ export function NavigationManager({
         <div className="flex flex-1 min-h-0">
 
           {/* Left: Available Pages */}
-          <div className="w-[280px] shrink-0 border-r border-gray-100 flex flex-col">
+          <div className="w-auto border-r border-gray-100 flex flex-1 flex-col">
             <div className="px-4 pt-3 pb-2 shrink-0">
               <p className="text-xs font-bold text-gray-700">Available Pages</p>
               <p className="text-[10px] text-gray-400 mt-0.5">Drag to menus or root in Linked Pages</p>
@@ -417,7 +418,7 @@ export function NavigationManager({
           </div>
 
           {/* Right: Linked Pages */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col ">
             {/* Right header + Add New Menu */}
             <div className="flex items-center justify-between px-4 py-3 shrink-0">
               <p className="text-xs font-bold text-gray-700">Linked Pages</p>
@@ -526,6 +527,7 @@ export function NavigationManager({
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

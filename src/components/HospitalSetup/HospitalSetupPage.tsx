@@ -2,12 +2,13 @@ import { useState, useCallback } from "react";
 import {
   Type, Tags, MapPin, Clock,
   CheckCircle2, Circle, Save, ChevronRight,
-  Building2, AlertCircle,
+  Building2, AlertCircle, Zap,
 } from "lucide-react";
 import { BasicInfoSection, toSlug, type BasicInfoData } from "./sections/BasicInfoSection";
 import { TaxonomySection, type TaxonomyData } from "./sections/TaxonomySection";
 import { ContactSection, type ContactData } from "./sections/ContactSection";
 import { OperatingHoursSection } from "./sections/OperatingHoursSection";
+import { WebsiteMigrationPanel, type ImportPayload } from "./WebsiteMigrationPanel";
 import type { WeekSchedule } from "./ui/OperatingHoursEditor";
 import type { HospitalType, PetType } from "../../types/clinic";
 
@@ -163,10 +164,11 @@ function SaveButton({
 // ─── HospitalSetupPage ────────────────────────────────────────────────────────
 
 export function HospitalSetupPage() {
-  const [activeSection, setActiveSection] = useState<SectionId>("basic");
-  const [form, setForm] = useState<FormState>(INITIAL_STATE);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [activeSection, setActiveSection]   = useState<SectionId>("basic");
+  const [form, setForm]                     = useState<FormState>(INITIAL_STATE);
+  const [saveState, setSaveState]           = useState<SaveState>("idle");
+  const [lastSaved, setLastSaved]           = useState<Date | null>(null);
+  const [migrationOpen, setMigrationOpen]   = useState(false);
 
   // ── Patch helpers ──────────────────────────────────────────────────────────
 
@@ -198,6 +200,56 @@ export function HospitalSetupPage() {
   const patchHours = useCallback((hours: WeekSchedule) => {
     setForm((prev) => ({ ...prev, hours }));
     setSaveState("idle");
+  }, []);
+
+  // ── Website migration import ────────────────────────────────────────────────
+
+  const handleImport = useCallback((payload: ImportPayload) => {
+    setForm(prev => {
+      let next = { ...prev };
+
+      if (payload.basic) {
+        const generalPatch = payload.basic.general ?? {};
+        next = {
+          ...next,
+          basic: {
+            ...next.basic,
+            ...(payload.basic.hospitalType ? { hospitalType: payload.basic.hospitalType } : {}),
+            general: {
+              ...next.basic.general,
+              ...generalPatch,
+              // Auto-derive slug from imported name unless already customised
+              ...(generalPatch.name
+                ? { slug: next.basic.general.slug || toSlug(generalPatch.name) }
+                : {}),
+            },
+          },
+        };
+      }
+
+      if (payload.taxonomy) {
+        next = { ...next, taxonomy: { ...next.taxonomy, ...payload.taxonomy } };
+      }
+
+      if (payload.contact) {
+        next = {
+          ...next,
+          contact: {
+            ...next.contact,
+            ...payload.contact,
+            address: { ...next.contact.address, ...(payload.contact.address ?? {}) },
+          },
+        };
+      }
+
+      if (payload.hours) {
+        next = { ...next, hours: payload.hours };
+      }
+
+      return next;
+    });
+    setSaveState("idle");
+    setMigrationOpen(false);
   }, []);
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -375,6 +427,24 @@ export function HospitalSetupPage() {
           </ul>
         </nav>
 
+        {/* Import from existing site CTA */}
+        <div className="px-3 pb-2">
+          <button
+            type="button"
+            onClick={() => setMigrationOpen(true)}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-[#003459]/30 bg-[#003459]/4 hover:bg-[#003459]/8 hover:border-[#003459]/50 transition-all group"
+          >
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#003459] to-[#0369A1] flex items-center justify-center shrink-0">
+              <Zap className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-xs font-semibold text-[#003459] leading-tight">Import from existing site</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Auto-fill from your live website</p>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-[#003459]/50 group-hover:text-[#003459] transition-colors" />
+          </button>
+        </div>
+
         {/* Bottom: last-saved + publish hint */}
         <div className="px-4 py-4 border-t border-gray-100">
           {lastSaved ? (
@@ -398,6 +468,14 @@ export function HospitalSetupPage() {
           )}
         </div>
       </aside>
+
+      {/* ── Migration panel ── */}
+      {migrationOpen && (
+        <WebsiteMigrationPanel
+          onClose={() => setMigrationOpen(false)}
+          onImport={handleImport}
+        />
+      )}
 
       {/* ── Content area ── */}
       <div className="flex-1 flex flex-col overflow-hidden">

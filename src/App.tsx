@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { Settings2, Globe, PanelLeft } from "lucide-react";
+import { Settings2, Globe, PanelLeft, Check } from "lucide-react";
 import { HospitalSetupPage } from "./components/HospitalSetup/HospitalSetupPage";
 import { WebsiteEditorPage } from "./components/WebsiteEditor/WebsiteEditorPage";
 import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
@@ -35,31 +35,50 @@ export default function App() {
           </span>
         </div>
 
-        {/* Centre: Segmented control */}
-        <div
-          role="tablist"
-          aria-label="Switch mode"
-          className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-1"
-        >
-          {MODES.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              onClick={() => setMode(id)}
-              aria-selected={mode === id}
-              className={[
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1 focus-visible:ring-offset-gray-100",
-                mode === id
-                  ? "bg-white text-[#003459] shadow-sm shadow-black/8 ring-1 ring-black/[0.06]"
-                  : "text-gray-500 hover:text-gray-700",
-              ].join(" ")}
-            >
-              <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-              {label}
-            </button>
-          ))}
+        {/* Centre: Step-progress tabs */}
+        <div role="tablist" aria-label="Switch mode" className="flex items-center">
+          {MODES.map(({ id, label }, i) => {
+            const activeIdx = MODES.findIndex(m => m.id === mode);
+            const active = mode === id;
+            const past   = i < activeIdx;
+            return (
+              <div key={id} className="flex items-center">
+                <button
+                  type="button"
+                  role="tab"
+                  onClick={() => setMode(id)}
+                  aria-selected={active}
+                  className="group flex items-center gap-2 px-2 py-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]"
+                >
+                  {/* Step bubble */}
+                  <div className={[
+                    "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold border-2 transition-all duration-200",
+                    active ? "bg-[#003459] border-[#003459] text-white shadow-sm"
+                           : past ? "bg-[#003459]/10 border-[#003459]/40 text-[#003459]"
+                                  : "bg-white border-gray-300 text-gray-400 group-hover:border-gray-400",
+                  ].join(" ")}>
+                    {past ? <Check className="w-3 h-3" /> : i + 1}
+                  </div>
+                  {/* Label */}
+                  <span className={[
+                    "text-sm font-medium transition-colors whitespace-nowrap",
+                    active ? "text-[#003459]"
+                           : past ? "text-gray-500"
+                                  : "text-gray-400 group-hover:text-gray-600",
+                  ].join(" ")}>
+                    {label}
+                  </span>
+                </button>
+                {/* Connector */}
+                {i < MODES.length - 1 && (
+                  <div className="w-10 h-px mx-1 shrink-0 relative">
+                    <div className="absolute inset-0 bg-gray-200 rounded-full" />
+                    {past && <div className="absolute inset-0 bg-[#003459]/30 rounded-full transition-all duration-300" />}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Right: Actions */}
