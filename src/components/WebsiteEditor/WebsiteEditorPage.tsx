@@ -87,6 +87,7 @@ export interface SEOState {
   ogImageUrl: string;
   canonicalUrl: string;
   robots: string;
+  focusKeyword: string;
 }
 
 /** Core section IDs (always present). */
@@ -182,6 +183,7 @@ const INITIAL_SEO: SEOState = {
   ogImageUrl: "",
   canonicalUrl: "",
   robots: "index,follow",
+  focusKeyword: "",
 };
 
 // ─── WebsiteEditorPage ────────────────────────────────────────────────────────

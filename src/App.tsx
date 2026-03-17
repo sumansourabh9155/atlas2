@@ -3,18 +3,17 @@
  */
 
 import { useState } from "react";
-import { Settings2, Eye, PanelLeft } from "lucide-react";
+import { Settings2, Globe, PanelLeft } from "lucide-react";
 import { HospitalSetupPage } from "./components/HospitalSetup/HospitalSetupPage";
-import { PreviewRenderer } from "./preview/PreviewRenderer";
 import { WebsiteEditorPage } from "./components/WebsiteEditor/WebsiteEditorPage";
-import { mockClinicData } from "./data/mockClinic";
+import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
 
-type Mode = "setup" | "editor" | "preview";
+type Mode = "setup" | "editor" | "domain";
 
 const MODES: { id: Mode; label: string; Icon: React.ElementType }[] = [
-  { id: "setup",   label: "Hospital Details", Icon: Settings2 },
-  { id: "editor",  label: "Website Editor",   Icon: PanelLeft },
-  { id: "preview", label: "Preview",          Icon: Eye       },
+  { id: "setup",  label: "Hospital Details",   Icon: Settings2 },
+  { id: "editor", label: "Website Editor",     Icon: PanelLeft },
+  { id: "domain", label: "Domain Management",  Icon: Globe     },
 ];
 
 export default function App() {
@@ -36,8 +35,12 @@ export default function App() {
           </span>
         </div>
 
-        {/* Centre: Tab navigation */}
-        <div className="flex items-stretch h-12" role="tablist" aria-label="Switch mode">
+        {/* Centre: Segmented control */}
+        <div
+          role="tablist"
+          aria-label="Switch mode"
+          className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-1"
+        >
           {MODES.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -46,11 +49,11 @@ export default function App() {
               onClick={() => setMode(id)}
               aria-selected={mode === id}
               className={[
-                "inline-flex items-center gap-1.5 px-4 text-sm font-medium transition-colors",
-                "border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#003459]",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1 focus-visible:ring-offset-gray-100",
                 mode === id
-                  ? "border-[#003459] text-[#003459]"
-                  : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300",
+                  ? "bg-white text-[#003459] shadow-sm shadow-black/8 ring-1 ring-black/[0.06]"
+                  : "text-gray-500 hover:text-gray-700",
               ].join(" ")}
             >
               <Icon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -78,13 +81,9 @@ export default function App() {
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-hidden">
-        {mode === "setup" && <HospitalSetupPage />}
+        {mode === "setup"  && <HospitalSetupPage />}
         {mode === "editor" && <WebsiteEditorPage onNavigateToSetup={() => setMode("setup")} />}
-        {mode === "preview" && (
-          <div className="h-full overflow-y-auto">
-            <PreviewRenderer website={mockClinicData} />
-          </div>
-        )}
+        {mode === "domain" && <DomainManagementPage />}
       </div>
     </div>
   );

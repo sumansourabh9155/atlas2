@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Pencil, Globe, GripVertical, Eye, EyeOff, ChevronDown, Check,
   Sparkles, Link2, LayoutGrid, MapPin, Trophy, Users, MessageSquare,
   Briefcase, HelpCircle, Mail, Layout, Settings2,
-  Image as ImageIcon, Trash2,
+  Image as ImageIcon, Trash2, Zap, RefreshCw, Tag, AlertCircle,
+  CheckCircle2, XCircle,
 } from "lucide-react";
 import { HeroEditor } from "./editors/HeroEditor";
 import { ServicesEditor } from "./editors/ServicesEditor";
@@ -26,6 +27,12 @@ import {
   ContactSplitEditor,
   isDynamicSection, getTypeFromInstanceId, DYNAMIC_SECTION_META,
 } from "./sections";
+import {
+  generateSEO,
+  buildSEOContentInput,
+  computeDetailedSEOChecks,
+  type KeywordHit,
+} from "./ai/seoGenerator";
 
 // ─── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -506,15 +513,6 @@ function AccordionSection({
 
 // ─── SEO helpers ──────────────────────────────────────────────────────────────
 
-function computeSeoHealth(state: SEOState) {
-  return [
-    { label: "Meta title",       ok: state.metaTitle.length > 0 && state.metaTitle.length <= 60       },
-    { label: "Meta description", ok: state.metaDescription.length > 0 && state.metaDescription.length <= 160 },
-    { label: "OG image",         ok: state.ogImageUrl.length > 0                                      },
-    { label: "Canonical URL",    ok: state.canonicalUrl.length > 0                                    },
-  ];
-}
-
 function CharProgress({ value, max }: { value: number; max: number }) {
   const pct  = Math.min((value / max) * 100, 100);
   const over = value > max;
@@ -527,54 +525,208 @@ function CharProgress({ value, max }: { value: number; max: number }) {
   );
 }
 
+// ─── Circular SEO score gauge ─────────────────────────────────────────────────
+
+function ScoreRing({ score, color }: { score: number; color: string }) {
+  const r  = 26;
+  const cx = 32;
+  const cy = 32;
+  const circumference = 2 * Math.PI * r;
+  const dash = (score / 100) * circumference;
+  return (
+    <svg width={64} height={64} viewBox="0 0 64 64" className="shrink-0" aria-hidden="true">
+      {/* Track */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth={6} />
+      {/* Fill */}
+      <circle
+        cx={cx} cy={cy} r={r} fill="none"
+        stroke={color} strokeWidth={6}
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circumference - dash}`}
+        strokeDashoffset={circumference / 4}
+        style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)" }}
+      />
+      {/* Score label */}
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
+        fontSize={13} fontWeight={700} fill={color} fontFamily="Inter,system-ui,sans-serif">
+        {score}
+      </text>
+    </svg>
+  );
+}
+
 // ─── SEO tab ──────────────────────────────────────────────────────────────────
 
-interface SEOTabProps { state: SEOState; onChange: (u: Partial<SEOState>) => void; clinicName: string }
+interface SEOTabProps {
+  state:           SEOState;
+  onChange:        (u: Partial<SEOState>) => void;
+  clinicName:      string;
+  clinic:          ClinicWebsite;
+  heroState:       HeroEditorState;
+  servicesState:   ServicesEditorState;
+}
 
-function SEOTab({ state, onChange, clinicName }: SEOTabProps) {
-  const [previewMode, setPreviewMode] = useState<"google" | "social">("google");
+function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState }: SEOTabProps) {
+  const [previewMode, setPreviewMode]     = useState<"google" | "social">("google");
+  const [generating,  setGenerating]      = useState(false);
+  const [generated,   setGenerated]       = useState(false);
+  const [keywords,    setKeywords]        = useState<KeywordHit[]>([]);
+  const [showChecks,  setShowChecks]      = useState(false);
 
   const displayTitle = state.metaTitle      || `${clinicName} — Specialty & Emergency Vet Care`;
   const displayDesc  = state.metaDescription || "Board-certified specialists in internal medicine, surgery, and critical care.";
-  const displayUrl   = (state.canonicalUrl || "yourclinic.com").replace(/https?:\/\//, "").replace(/\/$/, "");
+  const displayUrl   = (state.canonicalUrl || "yourclinic.vet").replace(/https?:\/\//, "").replace(/\/$/, "");
 
-  const health    = computeSeoHealth(state);
-  const filled    = health.filter(h => h.ok).length;
-  const score     = Math.round((filled / health.length) * 100);
-  const scoreColor = score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444";
-  const scoreLabel = score >= 75 ? "Good" : score >= 50 ? "Needs work" : "Incomplete";
+  // Build detailed checks (10 checks)
+  const checks = computeDetailedSEOChecks(
+    state.metaTitle,
+    state.metaDescription,
+    state.ogImageUrl,
+    state.canonicalUrl,
+    state.focusKeyword,
+    state.robots,
+    {
+      clinicName: clinic.general.name,
+      clinicSlug: clinic.general.slug,
+      city: clinic.contact.address?.city ?? "",
+    },
+  );
+  const passedCount = checks.filter(c => c.ok).length;
+  const score       = Math.round((passedCount / checks.length) * 100);
+  const scoreColor  = score === 100 ? "#10b981" : score >= 70 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const scoreLabel  = score === 100 ? "Perfect" : score >= 70 ? "Good" : score >= 40 ? "Needs work" : "Incomplete";
 
   const titleLen = state.metaTitle.length;
   const descLen  = state.metaDescription.length;
 
-  return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
+  // ── AI Generate handler ──────────────────────────────────────────────────────
+  const handleGenerate = useCallback(async () => {
+    setGenerating(true);
+    setGenerated(false);
+    try {
+      const input = buildSEOContentInput(
+        clinic,
+        heroState,
+        servicesState,
+        state.ogImageUrl,
+        state.canonicalUrl,
+      );
+      const result = await generateSEO(input);
+      onChange({
+        metaTitle:       result.metaTitle,
+        metaDescription: result.metaDescription,
+        ogImageUrl:      result.ogImageUrl,
+        canonicalUrl:    result.canonicalUrl,
+        focusKeyword:    result.focusKeyword,
+      });
+      setKeywords(result.detectedKeywords);
+      setGenerated(true);
+      // Auto-reset checkmark after 3 s
+      setTimeout(() => setGenerated(false), 3000);
+    } finally {
+      setGenerating(false);
+    }
+  }, [clinic, heroState, servicesState, state.ogImageUrl, state.canonicalUrl, onChange]);
 
-      {/* ── SEO Health card ── */}
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+
+      {/* ── AI Generate CTA ── */}
+      <button
+        type="button"
+        onClick={handleGenerate}
+        disabled={generating}
+        className={[
+          "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold",
+          "transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          "focus-visible:ring-[#003459] shadow-sm",
+          generating
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : generated
+            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            : "bg-[#003459] text-white hover:bg-[#00253f] active:scale-[0.98]",
+        ].join(" ")}
+        aria-label="Generate SEO fields with AI"
+      >
+        {generating ? (
+          <>
+            <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" />
+            Analysing your content…
+          </>
+        ) : generated ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+            SEO Generated — 100% Score
+          </>
+        ) : (
+          <>
+            <Zap className="w-4 h-4" aria-hidden="true" />
+            Generate SEO with AI
+          </>
+        )}
+      </button>
+
+      {/* ── SEO Score card ── */}
       <div className="p-3.5 rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-gray-700">SEO Health</p>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium" style={{ color: scoreColor }}>{scoreLabel}</span>
-            <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor }}>{score}%</span>
+        <div className="flex items-center gap-3 mb-3">
+          <ScoreRing score={score} color={scoreColor} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="text-xs font-semibold text-gray-800">SEO Score</p>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ background: scoreColor + "20", color: scoreColor }}
+              >
+                {scoreLabel}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400">
+              {passedCount}/{checks.length} checks passed
+            </p>
+            {/* Score bar */}
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${score}%`, backgroundColor: scoreColor }}
+              />
+            </div>
           </div>
         </div>
-        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, backgroundColor: scoreColor }} />
-        </div>
-        <div className="grid grid-cols-2 gap-y-1.5 gap-x-2">
-          {health.map(({ label, ok }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${ok ? "bg-emerald-100" : "bg-gray-100"}`}>
-                {ok
-                  ? <Check className="w-2.5 h-2.5 text-emerald-600" />
-                  : <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                }
-              </span>
-              <span className={`text-[10px] ${ok ? "text-gray-700" : "text-gray-400"}`}>{label}</span>
-            </div>
-          ))}
-        </div>
+
+        {/* Check list (collapsible) */}
+        <button
+          type="button"
+          onClick={() => setShowChecks((v) => !v)}
+          className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 hover:text-gray-800 transition-colors focus:outline-none w-full"
+        >
+          <ChevronDown
+            className="w-3 h-3 transition-transform duration-200"
+            style={{ transform: showChecks ? "rotate(180deg)" : "rotate(0deg)" }}
+            aria-hidden="true"
+          />
+          {showChecks ? "Hide" : "Show"} all {checks.length} checks
+        </button>
+
+        {showChecks && (
+          <div className="mt-2.5 flex flex-col gap-1.5">
+            {checks.map(({ id, label, ok, fix }) => (
+              <div key={id} className="flex items-start gap-2">
+                <span className="shrink-0 mt-0.5">
+                  {ok
+                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
+                    : <XCircle      className="w-3.5 h-3.5 text-red-400"     aria-hidden="true" />
+                  }
+                </span>
+                <div className="min-w-0">
+                  <p className={`text-[10px] font-medium leading-snug ${ok ? "text-gray-700" : "text-gray-500"}`}>{label}</p>
+                  {!ok && fix && (
+                    <p className="text-[9px] text-amber-600 leading-snug mt-0.5">{fix}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Preview ── */}
@@ -584,15 +736,14 @@ function SEOTab({ state, onChange, clinicName }: SEOTabProps) {
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-gray-100">
             {(["google", "social"] as const).map((m) => (
               <button
-                key={m}
-                type="button"
+                key={m} type="button"
                 onClick={() => setPreviewMode(m)}
                 className={[
                   "px-2.5 py-1 rounded-md text-[10px] font-medium transition-all focus:outline-none",
                   previewMode === m ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700",
                 ].join(" ")}
               >
-                {m === "google" ? "Google" : "Social"}
+                {m === "google" ? "🔍 Google" : "📱 Social"}
               </button>
             ))}
           </div>
@@ -621,11 +772,11 @@ function SEOTab({ state, onChange, clinicName }: SEOTabProps) {
           <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
             <div className="h-28 bg-gray-100 flex items-center justify-center">
               {state.ogImageUrl
-                ? <img src={state.ogImageUrl} alt="OG preview" className="w-full h-full object-cover" />
+                ? <img src={state.ogImageUrl} alt="OG preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 : (
                   <div className="flex flex-col items-center gap-1.5 text-gray-300">
                     <ImageIcon className="w-7 h-7" aria-hidden="true" />
-                    <span className="text-[10px]">No OG image set</span>
+                    <span className="text-[10px]">No OG image set — click Generate to auto-fill</span>
                   </div>
                 )
               }
@@ -639,89 +790,148 @@ function SEOTab({ state, onChange, clinicName }: SEOTabProps) {
         )}
       </div>
 
+      {/* ── Focus keyword ── */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <label className={LABEL} style={{ marginBottom: 0 }}>Focus Keyword</label>
+          <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1 py-0.5">Primary SEO target</span>
+        </div>
+        <input
+          type="text"
+          value={state.focusKeyword}
+          onChange={(e) => onChange({ focusKeyword: e.target.value })}
+          className={INPUT}
+          placeholder="e.g. emergency vet Austin"
+        />
+        <p className="text-[10px] text-gray-400 mt-1.5">
+          The phrase you most want to rank for — should appear in title &amp; description.
+        </p>
+      </div>
+
       {/* ── Meta title ── */}
       <div>
         <div className="flex items-baseline justify-between mb-1">
           <label className={LABEL}>Meta Title</label>
-          <span className={`text-[10px] font-medium tabular-nums ${titleLen > 60 ? "text-red-500" : titleLen > 50 ? "text-amber-500" : "text-gray-400"}`}>
+          <span className={`text-[10px] font-medium tabular-nums ${titleLen > 60 ? "text-red-500" : titleLen > 50 ? "text-amber-500" : titleLen > 0 ? "text-emerald-600" : "text-gray-400"}`}>
             {titleLen}/60
           </span>
         </div>
-        <input type="text" value={state.metaTitle}
+        <input
+          type="text"
+          value={state.metaTitle}
           onChange={(e) => onChange({ metaTitle: e.target.value })}
           className={INPUT}
           placeholder={`${clinicName} — Advanced Specialty & Emergency Care`}
         />
         <CharProgress value={titleLen} max={60} />
-        {titleLen === 0 && <p className="text-[10px] text-gray-400 mt-1.5">Tip: Include clinic name + primary service</p>}
-        {titleLen > 60 && <p className="text-[10px] text-red-500 mt-1.5">Too long — Google truncates at ~60 chars</p>}
+        {titleLen === 0 && <p className="text-[10px] text-gray-400 mt-1.5">💡 Include clinic name + primary service + city</p>}
+        {titleLen > 60 && <p className="text-[10px] text-red-500 mt-1.5">⚠ Too long — Google truncates at ~60 chars</p>}
+        {titleLen > 0 && titleLen <= 60 && <p className="text-[10px] text-emerald-600 mt-1.5">✓ Perfect length</p>}
       </div>
 
       {/* ── Meta description ── */}
       <div>
         <div className="flex items-baseline justify-between mb-1">
           <label className={LABEL}>Meta Description</label>
-          <span className={`text-[10px] font-medium tabular-nums ${descLen > 160 ? "text-red-500" : descLen > 140 ? "text-amber-500" : "text-gray-400"}`}>
+          <span className={`text-[10px] font-medium tabular-nums ${descLen > 160 ? "text-red-500" : descLen > 140 ? "text-amber-500" : descLen > 0 ? "text-emerald-600" : "text-gray-400"}`}>
             {descLen}/160
           </span>
         </div>
-        <textarea rows={3} value={state.metaDescription}
+        <textarea
+          rows={3}
+          value={state.metaDescription}
           onChange={(e) => onChange({ metaDescription: e.target.value })}
           className={`${INPUT} h-auto py-2 resize-none`}
           placeholder="Board-certified specialists in internal medicine, surgery, and critical care for the Austin area."
         />
         <CharProgress value={descLen} max={160} />
-        {descLen === 0 && <p className="text-[10px] text-gray-400 mt-1.5">Tip: Include services, location, and a call to action</p>}
-        {descLen > 160 && <p className="text-[10px] text-red-500 mt-1.5">Too long — keep under 160 characters</p>}
+        {descLen === 0 && <p className="text-[10px] text-gray-400 mt-1.5">💡 Include services, location, and a call to action</p>}
+        {descLen > 160 && <p className="text-[10px] text-red-500 mt-1.5">⚠ Too long — keep under 160 chars</p>}
+        {descLen > 0 && descLen <= 160 && <p className="text-[10px] text-emerald-600 mt-1.5">✓ Perfect length</p>}
       </div>
 
       {/* ── OG image ── */}
       <div>
-        <label className={LABEL}>OG / Social Image URL</label>
-        <input type="url" value={state.ogImageUrl}
+        <div className="flex items-baseline justify-between mb-1">
+          <label className={LABEL}>OG / Social Image URL</label>
+          {state.ogImageUrl && (
+            <button type="button" onClick={() => setPreviewMode("social")}
+              className="text-[10px] text-[#003459] hover:underline focus:outline-none">
+              Preview →
+            </button>
+          )}
+        </div>
+        <input
+          type="url"
+          value={state.ogImageUrl}
           onChange={(e) => onChange({ ogImageUrl: e.target.value })}
           className={`${INPUT} font-mono text-xs`}
           placeholder="https://yourdomain.com/og-image.jpg"
         />
-        <p className="text-[10px] text-gray-400 mt-1.5">
-          1200×630px — used by Facebook, Twitter, LinkedIn
-          {state.ogImageUrl && (
-            <button type="button" onClick={() => setPreviewMode("social")}
-              className="ml-1.5 text-[#003459] hover:underline focus:outline-none">
-              Preview →
-            </button>
-          )}
-        </p>
+        <p className="text-[10px] text-gray-400 mt-1.5">Recommended: 1200×630px · used by Facebook, X (Twitter), LinkedIn</p>
       </div>
 
       {/* ── Canonical URL ── */}
       <div>
         <label className={LABEL}>Canonical URL</label>
-        <input type="url" value={state.canonicalUrl}
+        <input
+          type="url"
+          value={state.canonicalUrl}
           onChange={(e) => onChange({ canonicalUrl: e.target.value })}
           className={`${INPUT} font-mono text-xs`}
-          placeholder="https://yourdomain.com/"
+          placeholder="https://yourclinic.vet/"
         />
+        <p className="text-[10px] text-gray-400 mt-1.5">Prevents duplicate-content penalties — set to your live domain.</p>
       </div>
 
       {/* ── Robots ── */}
       <div>
-        <label className={LABEL}>Robots</label>
+        <label className={LABEL}>Robots directive</label>
         <select value={state.robots} onChange={(e) => onChange({ robots: e.target.value })} className={INPUT}>
-          <option value="index,follow">index, follow — visible to search engines</option>
+          <option value="index,follow">index, follow — visible to all search engines ✓</option>
           <option value="noindex,follow">noindex, follow — hide from search results</option>
           <option value="index,nofollow">index, nofollow — don't follow links</option>
           <option value="noindex,nofollow">noindex, nofollow — completely hidden</option>
         </select>
       </div>
 
+      {/* ── Keyword analysis ── */}
+      {keywords.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+            <Tag className="w-3.5 h-3.5 text-gray-400" aria-hidden="true" />
+            <p className="text-xs font-semibold text-gray-700">Detected Keywords</p>
+            <span className="ml-auto text-[10px] text-gray-400">{keywords.length} terms</span>
+          </div>
+          <div className="p-3 flex flex-wrap gap-1.5">
+            {keywords.map(({ keyword, score: kwScore, sources }) => (
+              <span
+                key={keyword}
+                title={`Sources: ${sources.join(", ")}`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-default"
+                style={{
+                  background: kwScore === 3 ? "#dbeafe" : kwScore === 2 ? "#f0fdf4" : "#f9fafb",
+                  color:      kwScore === 3 ? "#1e40af" : kwScore === 2 ? "#166534" : "#6b7280",
+                  border:     `1px solid ${kwScore === 3 ? "#bfdbfe" : kwScore === 2 ? "#bbf7d0" : "#e5e7eb"}`,
+                }}
+              >
+                {kwScore === 3 && "★ "}
+                {keyword}
+              </span>
+            ))}
+          </div>
+          <p className="text-[9px] text-gray-400 px-3.5 pb-2.5">★ High priority · hover for source section</p>
+        </div>
+      )}
+
       {/* ── Structured data ── */}
       <div className="p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
         <p className="text-xs font-semibold text-[#003459] mb-1">Structured Data — Auto-generated</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          LocalBusiness, VetOrVeterinaryCare, and OpeningHoursSpecification schemas are auto-generated from your Hospital Details.
+          <strong className="font-semibold">LocalBusiness</strong>, <strong className="font-semibold">VetOrVeterinaryCare</strong>, and <strong className="font-semibold">OpeningHoursSpecification</strong> JSON-LD schemas are auto-generated from your Hospital Details and injected into the page <code>&lt;head&gt;</code> at publish time.
         </p>
       </div>
+
     </div>
   );
 }
@@ -919,7 +1129,14 @@ export function RightPanel({
 
       {/* ── SEO tab ── */}
       {tab === "seo" && (
-        <SEOTab state={seoState} onChange={onSeoChange} clinicName={clinic.general.name} />
+        <SEOTab
+          state={seoState}
+          onChange={onSeoChange}
+          clinicName={clinic.general.name}
+          clinic={clinic}
+          heroState={heroState}
+          servicesState={servicesState}
+        />
       )}
 
       {/* ── Content Editor tab ── */}
