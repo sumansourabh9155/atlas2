@@ -9,6 +9,14 @@ import { AIEditorContext, SECTION_LABELS } from "./ai/AIEditorContext";
 import { runToneRewrite, type TonePreset, type AllSectionContent } from "./ai/mockAI";
 import { FillFromScratchWizard } from "./ai/FillFromScratchWizard";
 import { ConsistencyPanel } from "./ai/ConsistencyPanel";
+import { SmartModesPanel } from "./ai/SmartModesPanel";
+import { type CampaignPlan } from "./ai/campaignBuilder";
+import {
+  DEFAULT_SMART_MODES_STATE,
+  computeActiveMode,
+  type SmartModesState,
+  type ActiveModeResult,
+} from "../../types/smartModes";
 import {
   type AddableSectionType,
   type DynamicSectionRegistry,
@@ -256,6 +264,7 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     cardgrid2: 0, cardgrid3: 0, teamcards: 0,
     herocentered: 0, herosplit: 0,
     contactsplit: 0,
+    emailcapture: 0, splitcontent: 0, featuregrid: 0,
   });
 
   // Dragging template type — lifted so ClinicHomepageTemplate shows drop zones
@@ -269,6 +278,22 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
   const [consistencyOpen, setConsistencyOpen] = useState(false);
   const [isToneLoading,   setIsToneLoading]   = useState(false);
   const [activeTone,      setActiveTone]      = useState<TonePreset | null>(null);
+
+  // Smart Modes
+  const [smartModesOpen, setSmartModesOpen] = useState(false);
+  const [smartModesState,     setSmartModesState]     = useState<SmartModesState>(DEFAULT_SMART_MODES_STATE);
+  const [tick, setTick] = useState(0); // increments every 60s to recompute activeMode
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const activeMode = useMemo<ActiveModeResult | null>(
+    () => smartModesState.enabled ? computeActiveMode(smartModesState, new Date()) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [smartModesState, tick]
+  );
 
   // Preview → field focus bridge
   const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
@@ -458,6 +483,58 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     }
   }, [updateHero, updateServices, updateTeams, updateTestimonials, updateJoinTeam, updateFaq, updateNewsletter]);
 
+  // ── Campaign Builder apply handler ────────────────────────────────────────────
+
+  const handleApplyCampaign = useCallback((plan: CampaignPlan) => {
+    for (const diff of plan.diffs) {
+      switch (diff.kind) {
+
+        case "update_hero": {
+          const p = diff.payload;
+          setHeroState(prev => ({
+            ...prev,
+            ...(p.headline    !== undefined ? { headline:    p.headline }    : {}),
+            ...(p.subheadline !== undefined ? { subheadline: p.subheadline } : {}),
+            ...(p.badgeText   !== undefined ? { badgeText:   p.badgeText }   : {}),
+          }));
+          break;
+        }
+
+        case "add_section": {
+          const p = diff.payload;
+          const type = p.sectionType as AddableSectionType;
+          const n = instanceCounters.current[type] ?? 0;
+          instanceCounters.current[type] = n + 1;
+          const instanceId = `${type}-${n}`;
+
+          setDynamicSections(prev => ({ ...prev, [instanceId]: p.initialState }));
+          setSectionOrder(prev => {
+            const next    = [...prev];
+            const afterIdx = next.indexOf(p.afterId);
+            const insertAt = afterIdx >= 0 ? afterIdx + 1 : next.length;
+            next.splice(insertAt, 0, instanceId);
+            return next;
+          });
+          setSectionVisibility(prev => ({ ...prev, [instanceId]: true }));
+          break;
+        }
+
+        case "reorder_sections": {
+          setSectionOrder(diff.payload.desiredOrder);
+          break;
+        }
+
+        case "set_visibility": {
+          setSectionVisibility(prev => ({ ...prev, [diff.payload.id]: diff.payload.visible }));
+          break;
+        }
+      }
+    }
+
+    // Navigate editor to hero to show the updated headline
+    setOpenBlock("hero");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   const aiContextValue = useMemo(() => ({
@@ -522,6 +599,8 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
         dynamicSections={dynamicSections}
         draggingTemplateType={draggingTemplateType}
         onTemplateDrop={handleTemplateDrop}
+        onApplyCampaign={handleApplyCampaign}
+        activeMode={activeMode}
       />
 
       {/* ── Right spacer: matches the floating right panel's footprint (margin 12px + 300px panel) ── */}
@@ -576,6 +655,7 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
           dynamicSections={dynamicSections}
           onUpdateDynamic={updateDynamicSection}
           onRemoveDynamic={handleRemoveDynamicSection}
+          onOpenSmartModes={() => setSmartModesOpen(true)}
         />
       </div>
 
@@ -592,6 +672,15 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
       <ConsistencyPanel
         onApplyFix={handleApplyFix}
         onClose={() => setConsistencyOpen(false)}
+      />
+    )}
+
+    {/* ── Generative Site Builder overlays ── */}
+    {smartModesOpen && (
+      <SmartModesPanel
+        smartModesState={smartModesState}
+        onUpdate={(patch) => setSmartModesState(s => ({ ...s, ...patch }))}
+        onClose={() => setSmartModesOpen(false)}
       />
     )}
 

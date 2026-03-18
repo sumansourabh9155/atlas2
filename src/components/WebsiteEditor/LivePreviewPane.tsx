@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Monitor, Tablet, Smartphone, Wifi, Battery, Sparkles } from "lucide-react";
+import type { ActiveModeResult } from "../../types/smartModes";
 import { HeroLivePreview } from "./HeroLivePreview";
 import { TeamsLivePreview } from "./TeamsLivePreview";
 import { ClinicHomepageTemplate } from "./ClinicHomepageTemplate";
@@ -13,6 +14,7 @@ import type {
 import type { ClinicWebsite } from "../../types/clinic";
 import type { TonePreset } from "./ai/mockAI";
 import type { AddableSectionType, DynamicSectionRegistry } from "./sections";
+import type { CampaignPlan } from "./ai/campaignBuilder";
 
 export type PreviewTheme = "1" | "2";
 
@@ -206,6 +208,9 @@ interface Props {
   dynamicSections?:        DynamicSectionRegistry;
   draggingTemplateType?:   AddableSectionType | null;
   onTemplateDrop?:         (type: AddableSectionType, afterIndex: number) => void;
+  // Generative Site Builder — Campaign mode lives inline in AICopilotBar
+  onApplyCampaign?:        (plan: CampaignPlan) => void;
+  activeMode?:             ActiveModeResult | null;
 }
 
 // ─── Editable-field hover CSS (injected once when onFieldClick is wired up) ────
@@ -237,6 +242,7 @@ export function LivePreviewPane({
   onFieldClick,
   onOpenWizard, onCheckConsistency, onTonePreset, isToneLoading, activeTone,
   dynamicSections, draggingTemplateType, onTemplateDrop,
+  onApplyCampaign, activeMode,
 }: Props) {
   const isTablet  = viewport === "tablet";
   const isMobile  = viewport === "mobile";
@@ -244,6 +250,26 @@ export function LivePreviewPane({
   const slug      = clinic.general.slug;
 
   const [aiExpanded, setAiExpanded] = useState(false);
+
+  // ── Measure preview area to scale device frames on narrow screens ─────────
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+
+  useEffect(() => {
+    const el = previewAreaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      setAvailableWidth(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // p-8 reserves 32px on each side; scale device frames so they never overflow.
+  // Using CSS `zoom` (not transform) so layout, click events, and scroll all stay correct.
+  const contentWidth = Math.max(0, availableWidth - 64);
+  const tabletZoom   = contentWidth > 0 ? Math.min(1, contentWidth / 768) : 1;
+  const mobileZoom   = contentWidth > 0 ? Math.min(1, contentWidth / 375) : 1;
 
   const compact = isMobile || isTablet;
 
@@ -347,8 +373,36 @@ export function LivePreviewPane({
           </div>
         </div>
 
-        {/* RIGHT — Viewport toggles */}
-        <div className="flex-1 flex items-center justify-end">
+        {/* RIGHT — Viewport toggles + Smart Mode indicator */}
+        <div className="flex-1 flex items-center justify-end gap-2">
+          {/* Smart Mode indicator */}
+          {activeMode && (
+            <span
+              className={[
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                activeMode.mode.color === "red"
+                  ? "bg-red-100 text-red-700 border-red-200"
+                  : activeMode.mode.color === "amber"
+                  ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-green-100 text-green-700 border-green-200",
+              ].join(" ")}
+              title={`Smart Mode: ${activeMode.mode.label} (${activeMode.triggeredBy})`}
+            >
+              <span
+                className={[
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  activeMode.mode.color === "red"
+                    ? "bg-red-500 animate-ping"
+                    : activeMode.mode.color === "amber"
+                    ? "bg-amber-500"
+                    : "bg-green-500",
+                ].join(" ")}
+                aria-hidden="true"
+              />
+              {activeMode.mode.label}
+            </span>
+          )}
+
           <div
             className="inline-flex items-center gap-0.5 p-0.5 rounded-xl"
             style={{ background: "#e2e2e5" }}
@@ -378,21 +432,22 @@ export function LivePreviewPane({
       </div>
 
       {/* ── Preview area ── */}
-      <div className="flex-1 relative overflow-hidden">
+      <div ref={previewAreaRef} className="flex-1 relative overflow-hidden">
         <div
           className={[
-            "absolute inset-0 overflow-none flex items-start justify-center p-8 transition-all duration-300",
+            "absolute inset-0 overflow-hidden flex items-start justify-center p-8 transition-all duration-300",
             aiExpanded ? "pb-52" : "pb-28",
           ].join(" ")}
         >
           {isGenerating && <GeneratingOverlay />}
 
-          {/* Desktop — full-width browser frame */}
+          {/* Desktop — fills the full available preview width; no arbitrary cap */}
           {isDesktop && (
-            <div className="w-full max-w-3xl bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+            <div className="w-full bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200/80">
               <BrowserChrome slug={slug} />
+              {/* overflow-x-hidden prevents sections from introducing horizontal scrollbars */}
               <div
-                className="overflow-auto"
+                className="overflow-y-auto overflow-x-hidden"
                 style={{ maxHeight: "calc(100vh - 200px)" }}
                 onClick={handlePreviewClick}
               >
@@ -401,30 +456,36 @@ export function LivePreviewPane({
             </div>
           )}
 
-          {/* Tablet — iPad frame at 768px */}
+          {/* Tablet — iPad frame at 768px; zoom scales the whole frame down if the
+              preview area is narrower, keeping layout/clicks/scroll intact without clipping.
+              Only applied when actually needed (< 1) to avoid unnecessary stacking contexts. */}
           {isTablet && (
-            <TabletFrame>
-              <div
-                className="overflow-auto"
-                style={{ maxHeight: "calc(100vh - 260px)" }}
-                onClick={handlePreviewClick}
-              >
-                {pageContent}
-              </div>
-            </TabletFrame>
+            <div style={tabletZoom < 1 ? { zoom: tabletZoom.toFixed(4) } : undefined}>
+              <TabletFrame>
+                <div
+                  className="overflow-y-auto overflow-x-hidden"
+                  style={{ maxHeight: "calc(100vh - 260px)" }}
+                  onClick={handlePreviewClick}
+                >
+                  {pageContent}
+                </div>
+              </TabletFrame>
+            </div>
           )}
 
-          {/* Mobile — phone frame */}
+          {/* Mobile — phone frame; same zoom-to-fit treatment */}
           {isMobile && (
-            <PhoneFrame>
-              <div
-                className="overflow-auto"
-                style={{ maxHeight: "calc(100vh - 300px)" }}
-                onClick={handlePreviewClick}
-              >
-                {pageContent}
-              </div>
-            </PhoneFrame>
+            <div style={mobileZoom < 1 ? { zoom: mobileZoom.toFixed(4) } : undefined}>
+              <PhoneFrame>
+                <div
+                  className="overflow-y-auto overflow-x-hidden"
+                  style={{ maxHeight: "calc(100vh - 300px)" }}
+                  onClick={handlePreviewClick}
+                >
+                  {pageContent}
+                </div>
+              </PhoneFrame>
+            </div>
           )}
         </div>
 
@@ -439,6 +500,9 @@ export function LivePreviewPane({
             onTonePreset={onTonePreset}
             isToneLoading={isToneLoading}
             activeTone={activeTone}
+            clinic={clinic}
+            currentSectionOrder={sectionOrder}
+            onApplyCampaign={onApplyCampaign}
           />
         </div>
       </div>

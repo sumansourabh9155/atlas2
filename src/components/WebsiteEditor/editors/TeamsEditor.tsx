@@ -21,6 +21,7 @@ function MiniToggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent
           transition-colors ${checked ? "bg-[#003459]" : "bg-gray-200"}`}

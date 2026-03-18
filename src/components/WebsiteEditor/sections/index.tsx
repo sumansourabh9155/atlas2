@@ -52,6 +52,17 @@ export { createDefaultHeroSplit, HeroSplitSectionRenderer, HeroSplitEditor, Hero
 export type { ContactSplitState, ContactFormField } from "./ContactSplitSection";
 export { createDefaultContactSplit, ContactSplitSectionRenderer, ContactSplitEditor, ContactSplitThumbnail } from "./ContactSplitSection";
 
+// ── Marketing sections ────────────────────────────────────────────────────────
+
+export type { EmailCaptureState }                   from "./EmailCaptureSection";
+export { createDefaultEmailCapture, EmailCaptureSectionRenderer, EmailCaptureEditor, EmailCaptureThumbnail } from "./EmailCaptureSection";
+
+export type { SplitContentState }                   from "./SplitContentSection";
+export { createDefaultSplitContent, SplitContentSectionRenderer, SplitContentEditor, SplitContentThumbnail } from "./SplitContentSection";
+
+export type { FeatureGridState, FeatureItem }        from "./FeatureGridSection";
+export { createDefaultFeatureGrid, FeatureGridSectionRenderer, FeatureGridEditor, FeatureGridThumbnail } from "./FeatureGridSection";
+
 // ─── Imports for registry ─────────────────────────────────────────────────────
 
 import { StatsThumbnail }          from "./StatsSection";
@@ -73,6 +84,9 @@ import { TeamCardsThumbnail }      from "./CardSections";
 import { HeroCenteredThumbnail }   from "./HeroSections";
 import { HeroSplitThumbnail }      from "./HeroSections";
 import { ContactSplitThumbnail }   from "./ContactSplitSection";
+import { EmailCaptureThumbnail }   from "./EmailCaptureSection";
+import { SplitContentThumbnail }   from "./SplitContentSection";
+import { FeatureGridThumbnail }    from "./FeatureGridSection";
 
 import type { StatsState }         from "./StatsSection";
 import type { CtaBandState }       from "./CtaBandSection";
@@ -84,6 +98,9 @@ import type { EmptyState, TwoColState, ThreeColState } from "./LayoutSections";
 import type { CardGridState, TeamCardsState } from "./CardSections";
 import type { HeroCenteredState, HeroSplitState } from "./HeroSections";
 import type { ContactSplitState }  from "./ContactSplitSection";
+import type { EmailCaptureState }  from "./EmailCaptureSection";
+import type { SplitContentState }  from "./SplitContentSection";
+import type { FeatureGridState }   from "./FeatureGridSection";
 
 import { createDefaultStats }         from "./StatsSection";
 import { createDefaultCtaBand }       from "./CtaBandSection";
@@ -95,6 +112,9 @@ import { createDefaultEmpty, createDefaultTwoCol, createDefaultThreeCol } from "
 import { createDefaultCardGrid2, createDefaultCardGrid3, createDefaultTeamCards } from "./CardSections";
 import { createDefaultHeroCentered, createDefaultHeroSplit } from "./HeroSections";
 import { createDefaultContactSplit }  from "./ContactSplitSection";
+import { createDefaultEmailCapture } from "./EmailCaptureSection";
+import { createDefaultSplitContent } from "./SplitContentSection";
+import { createDefaultFeatureGrid }  from "./FeatureGridSection";
 
 // ─── Addable Section Types ────────────────────────────────────────────────────
 
@@ -104,7 +124,8 @@ export type AddableSectionType =
   | "empty" | "twocol" | "threecol"
   | "cardgrid2" | "cardgrid3" | "teamcards"
   | "herocentered" | "herosplit"
-  | "contactsplit";
+  | "contactsplit"
+  | "emailcapture" | "splitcontent" | "featuregrid";
 
 // ─── Discriminated Union State ────────────────────────────────────────────────
 
@@ -127,7 +148,10 @@ export type DynamicSectionState =
   | { type: "teamcards";     state: TeamCardsState      }
   | { type: "herocentered";  state: HeroCenteredState   }
   | { type: "herosplit";     state: HeroSplitState      }
-  | { type: "contactsplit";  state: ContactSplitState   };
+  | { type: "contactsplit";  state: ContactSplitState   }
+  | { type: "emailcapture"; state: EmailCaptureState   }
+  | { type: "splitcontent"; state: SplitContentState   }
+  | { type: "featuregrid";  state: FeatureGridState    };
 
 export type DynamicSectionRegistry = Record<string, DynamicSectionState>;
 
@@ -154,6 +178,9 @@ export function createDefaultSection(type: AddableSectionType): DynamicSectionSt
     case "herocentered":  return { type, state: createDefaultHeroCentered()   };
     case "herosplit":     return { type, state: createDefaultHeroSplit()      };
     case "contactsplit":  return { type, state: createDefaultContactSplit()   };
+    case "emailcapture": return { type, state: createDefaultEmailCapture()  };
+    case "splitcontent": return { type, state: createDefaultSplitContent()  };
+    case "featuregrid":  return { type, state: createDefaultFeatureGrid()   };
     default: {
       // Exhaustiveness guard — adding a new AddableSectionType without a case will
       // surface a compile-time error here rather than silently returning undefined.
@@ -172,6 +199,7 @@ const ALL_TYPES: AddableSectionType[] = [
   "cardgrid2","cardgrid3","teamcards",
   "herocentered","herosplit",
   "contactsplit",
+  "emailcapture","splitcontent","featuregrid",
 ];
 
 /** Returns true when an id is a dynamic section instance (e.g. "stats-0"). */
@@ -224,6 +252,10 @@ export const ADDABLE_SECTION_DEFS: AddableSectionDef[] = [
   { type: "herosplit",     label: "Hero Split",      emoji: "⬓",  thumb: <HeroSplitThumbnail />,     category: "Hero"       },
   // Contact
   { type: "contactsplit",  label: "Contact + Form",  emoji: "✉",  thumb: <ContactSplitThumbnail />,  category: "Contact"    },
+  // Marketing
+  { type: "emailcapture", label: "Email Capture",   emoji: "📧", thumb: <EmailCaptureThumbnail />, category: "Marketing"  },
+  { type: "splitcontent", label: "Split Content",   emoji: "⬓",  thumb: <SplitContentThumbnail />, category: "Marketing"  },
+  { type: "featuregrid",  label: "Feature Grid",    emoji: "✨", thumb: <FeatureGridThumbnail />,  category: "Marketing"  },
 ];
 
 // ─── Meta (labels, emojis, categories) ───────────────────────────────────────

@@ -550,7 +550,7 @@ export function LeftPanel({
                 : "border-transparent text-gray-500 hover:text-gray-700",
             ].join(" ")}
           >
-            {t === "pages" ? "Pages" : "Section Templates"}
+            {t === "pages" ? "Pages" : "Components"}
           </button>
         ))}
 

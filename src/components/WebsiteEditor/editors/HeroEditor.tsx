@@ -43,6 +43,7 @@ function CtaRow({
           type="button"
           role="switch"
           aria-checked={value.enabled}
+          aria-label={`${label} enabled`}
           onClick={() => onChange({ ...value, enabled: !value.enabled })}
           className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent
             transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]

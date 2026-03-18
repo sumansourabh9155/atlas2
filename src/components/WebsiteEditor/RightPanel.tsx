@@ -25,6 +25,9 @@ import {
   CardGridEditor, TeamCardsEditor,
   HeroCenteredEditor, HeroSplitEditor,
   ContactSplitEditor,
+  EmailCaptureEditor,
+  SplitContentEditor,
+  FeatureGridEditor,
   isDynamicSection, getTypeFromInstanceId, DYNAMIC_SECTION_META,
 } from "./sections";
 import {
@@ -68,7 +71,7 @@ function MiniToggle({
     <div className="flex items-center justify-between py-1">
       <span className="text-xs text-gray-600">{label}</span>
       <button
-        type="button" role="switch" aria-checked={checked}
+        type="button" role="switch" aria-checked={checked} aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent transition-colors
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]
@@ -975,6 +978,8 @@ interface RightPanelProps {
   dynamicSections: DynamicSectionRegistry;
   onUpdateDynamic: (instanceId: string, ds: DynamicSectionState) => void;
   onRemoveDynamic: (instanceId: string) => void;
+  // Generative Site Builder
+  onOpenSmartModes?: () => void;
 }
 
 // ─── RightPanel ───────────────────────────────────────────────────────────────
@@ -995,6 +1000,7 @@ export function RightPanel({
   sectionOrder, onSectionOrderChange,
   sectionVisibility, onSectionVisibilityChange,
   dynamicSections, onUpdateDynamic, onRemoveDynamic,
+  onOpenSmartModes,
 }: RightPanelProps) {
   const [tab, setTab] = useState<"editor" | "seo">("editor");
 
@@ -1166,6 +1172,28 @@ export function RightPanel({
             </div>
           </div>
 
+          {/* Smart Modes trigger — shown when onOpenSmartModes is wired up */}
+          {onOpenSmartModes && (
+            <div className="shrink-0 px-3 py-1.5 border-b border-gray-100">
+              <button
+                type="button"
+                onClick={onOpenSmartModes}
+                className={[
+                  "w-full flex items-center justify-between px-3 py-2 rounded-lg",
+                  "bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700",
+                  "hover:bg-amber-100 hover:border-amber-300 transition-all",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                ].join(" ")}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" aria-hidden="true" />
+                  Smart Modes
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-50" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
           {/* Accordion list */}
           <div className="flex-1 overflow-y-auto relative">
             {listItems.map((listItem, idx) => {
@@ -1235,6 +1263,10 @@ export function RightPanel({
                     {ds.type === "herosplit"     && <HeroSplitEditor     state={ds.state} onChange={(u) => onUpdateDynamic(id, { type: "herosplit",     state: { ...ds.state, ...u } })} />}
                     {/* ── Contact ── */}
                     {ds.type === "contactsplit"  && <ContactSplitEditor  state={ds.state} onChange={(u) => onUpdateDynamic(id, { type: "contactsplit",  state: { ...ds.state, ...u } })} />}
+                    {/* ── Marketing ── */}
+                    {ds.type === "emailcapture"  && <EmailCaptureEditor  state={ds.state} onChange={(u) => onUpdateDynamic(id, { type: "emailcapture",  state: { ...ds.state, ...u } })} />}
+                    {ds.type === "splitcontent"  && <SplitContentEditor  state={ds.state} onChange={(u) => onUpdateDynamic(id, { type: "splitcontent",  state: { ...ds.state, ...u } })} />}
+                    {ds.type === "featuregrid"   && <FeatureGridEditor   state={ds.state} onChange={(u) => onUpdateDynamic(id, { type: "featuregrid",   state: { ...ds.state, ...u } })} />}
                   </AccordionSection>
                 );
               }

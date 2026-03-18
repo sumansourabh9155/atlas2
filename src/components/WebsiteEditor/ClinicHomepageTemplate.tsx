@@ -36,6 +36,9 @@ import {
   HeroCenteredSectionRenderer,
   HeroSplitSectionRenderer,
   ContactSplitSectionRenderer,
+  EmailCaptureSectionRenderer,
+  SplitContentSectionRenderer,
+  FeatureGridSectionRenderer,
 } from "./sections";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1733,6 +1736,10 @@ export function ClinicHomepageTemplate({
       case "herosplit":     return <HeroSplitSectionRenderer     state={ds.state} {...p} />;
       // ── Contact ──
       case "contactsplit":  return <ContactSplitSectionRenderer  state={ds.state} {...p} />;
+      // ── Marketing ──
+      case "emailcapture":  return <EmailCaptureSectionRenderer  state={ds.state} {...p} />;
+      case "splitcontent":  return <SplitContentSectionRenderer  state={ds.state} {...p} />;
+      case "featuregrid":   return <FeatureGridSectionRenderer   state={ds.state} {...p} />;
       default:              return null;
     }
   }

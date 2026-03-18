@@ -116,6 +116,7 @@ export function ServicesEditor({ state, onChange, clinic }: Props) {
           type="button"
           role="switch"
           aria-checked={state.showPricing}
+          aria-label="Show pricing"
           onClick={() => onChange({ showPricing: !state.showPricing })}
           className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent
             transition-colors ${state.showPricing ? "bg-[#003459]" : "bg-gray-200"}`}
