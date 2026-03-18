@@ -435,7 +435,7 @@ export function LivePreviewPane({
       <div ref={previewAreaRef} className="flex-1 relative overflow-hidden">
         <div
           className={[
-            "absolute inset-0 overflow-hidden flex items-start justify-center p-8 transition-all duration-300",
+            "absolute inset-0 overflow-hidden flex items-start justify-center px-8 pt-4 transition-all duration-300",
             aiExpanded ? "pb-52" : "pb-28",
           ].join(" ")}
         >
@@ -490,7 +490,7 @@ export function LivePreviewPane({
         </div>
 
         {/* ── Floating AI Copilot ── */}
-        <div className="absolute bottom-3 left-32 right-32 z-20">
+        <div className="absolute bottom-2 left-32 right-32 z-20">
           <AICopilotBar
             isGenerating={isGenerating}
             onGenerate={onGenerate}

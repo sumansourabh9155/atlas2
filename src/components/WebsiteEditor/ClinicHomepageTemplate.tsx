@@ -93,7 +93,6 @@ function Navbar({
   const firstWord = name.split(" ")[0].toUpperCase();
 
   const NAV_LINKS = [
-    { label: "Home",      dropdown: false },
     { label: "Locations", dropdown: true  },
     { label: "Services",  dropdown: true  },
     { label: "About Us",  dropdown: true  },
@@ -130,7 +129,7 @@ function Navbar({
         </div>
 
         {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-5 flex-1 justify-center">
+        <nav className="hidden md:flex items-center gap-2 flex-1 justify-center">
           {NAV_LINKS.map(({ label, dropdown }) => (
             <a
               key={label}

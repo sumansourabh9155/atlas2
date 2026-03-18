@@ -1,20 +1,22 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Type, Tags, MapPin, Clock,
-  CheckCircle2, Circle, Save, ChevronRight,
-  Building2, AlertCircle, Zap,
+  CheckCircle2, Save, ChevronRight,
+  AlertCircle, Zap, Settings, FileText,
 } from "lucide-react";
 import { BasicInfoSection, toSlug, type BasicInfoData } from "./sections/BasicInfoSection";
 import { TaxonomySection, type TaxonomyData } from "./sections/TaxonomySection";
 import { ContactSection, type ContactData } from "./sections/ContactSection";
 import { OperatingHoursSection } from "./sections/OperatingHoursSection";
+import { IntegrationsSection } from "./sections/IntegrationsSection";
+import { FooterPoliciesSection } from "./sections/FooterPoliciesSection";
 import { WebsiteMigrationPanel, type ImportPayload } from "./WebsiteMigrationPanel";
 import type { WeekSchedule } from "./ui/OperatingHoursEditor";
 import { useClinic } from "../../context/ClinicContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SectionId = "basic" | "taxonomy" | "contact" | "hours";
+type SectionId = "basic" | "taxonomy" | "contact" | "hours" | "integrations" | "footer";
 
 /** View-layer form shape — derived from context, passed to section components unchanged. */
 interface FormView {
@@ -32,31 +34,15 @@ const SECTIONS: {
   description: string;
   Icon: React.ElementType;
 }[] = [
-  {
-    id: "basic",
-    label: "Basic Information",
-    description: "Name, slug, colors & logo",
-    Icon: Type,
-  },
-  {
-    id: "taxonomy",
-    label: "Clinic Type & Pets",
-    description: "Hospital type & species treated",
-    Icon: Tags,
-  },
-  {
-    id: "contact",
-    label: "Location & Contact",
-    description: "Address, phone & email",
-    Icon: MapPin,
-  },
-  {
-    id: "hours",
-    label: "Operating Hours",
-    description: "Weekly availability schedule",
-    Icon: Clock,
-  },
+  { id: "basic",        label: "Basic Information",  description: "Name, slug, colors & logo",       Icon: Type     },
+  { id: "taxonomy",     label: "Clinic Type & Pets", description: "Hospital type & species treated",  Icon: Tags     },
+  { id: "contact",      label: "Location & Contact", description: "Address, phone & email",           Icon: MapPin   },
+  { id: "hours",        label: "Operating Hours",    description: "Weekly availability schedule",     Icon: Clock    },
+  { id: "integrations", label: "Integrations",       description: "Tracking, chatbots & consent",    Icon: Settings },
+  { id: "footer",       label: "Footer & Policies",  description: "Links, subscription & legal",      Icon: FileText },
 ];
+
+const STICKY_BAR_HEIGHT = 57; // px — height of the sticky save bar
 
 // ─── Completion heuristics ────────────────────────────────────────────────────
 
@@ -79,8 +65,9 @@ function isSectionComplete(id: SectionId, form: FormView): boolean {
       );
     case "hours":
       return form.hours !== undefined;
-    default:
-      return false;
+    case "integrations":
+    case "footer":
+      return true; // All optional — always green
   }
 }
 
@@ -88,13 +75,7 @@ function isSectionComplete(id: SectionId, form: FormView): boolean {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-function SaveButton({
-  state,
-  onClick,
-}: {
-  state: SaveState;
-  onClick: () => void;
-}) {
+function SaveButton({ state, onClick }: { state: SaveState; onClick: () => void }) {
   const label =
     state === "saving" ? "Saving…"
     : state === "saved"  ? "Saved"
@@ -117,7 +98,7 @@ function SaveButton({
       onClick={onClick}
       disabled={state === "saving"}
       className={[
-        "inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold text-white",
+        "inline-flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold text-white",
         "border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
         "focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed",
         cls,
@@ -130,6 +111,30 @@ function SaveButton({
   );
 }
 
+// ─── SectionHeader ────────────────────────────────────────────────────────────
+
+function SectionHeader({
+  icon: Icon,
+  label,
+  description,
+}: {
+  icon: React.ElementType;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-6">
+      <span className="p-2 rounded-xl bg-white border border-gray-200 text-gray-500 shadow-sm shrink-0">
+        <Icon className="w-4 h-4" aria-hidden="true" />
+      </span>
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 leading-tight">{label}</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── HospitalSetupPage ────────────────────────────────────────────────────────
 
 export function HospitalSetupPage() {
@@ -139,20 +144,68 @@ export function HospitalSetupPage() {
     updateTaxonomy,
     updateContact,
     updateHours,
+    updateIntegrations,
+    updateFooterConfig,
     saveStatus,
     triggerSave,
+    publish,
   } = useClinic();
 
   const [activeSection, setActiveSection] = useState<SectionId>("basic");
   const [lastSaved, setLastSaved]         = useState<Date | null>(null);
   const [migrationOpen, setMigrationOpen] = useState(false);
 
+  const sectionRefs      = useRef<(HTMLElement | null)[]>([]);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
   // Track last-saved timestamp when the global save succeeds
   useEffect(() => {
     if (saveStatus === "saved") setLastSaved(new Date());
   }, [saveStatus]);
 
-  // ── Derive the form view from context (sections still receive the same props) ──
+  // ── Scroll-linked active nav via IntersectionObserver ─────────────────────
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Take the first intersecting entry (topmost visible section)
+        const intersecting = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (intersecting.length > 0) {
+          const id = intersecting[0].target.getAttribute("data-section-id") as SectionId | null;
+          if (id) setActiveSection(id);
+        }
+      },
+      {
+        root: container,
+        rootMargin: "-8% 0px -75% 0px",
+        threshold: 0,
+      }
+    );
+
+    sectionRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — refs are stable and sections are static
+
+  function scrollToSection(id: SectionId) {
+    const idx = SECTIONS.findIndex((s) => s.id === id);
+    const el  = sectionRefs.current[idx];
+    const container = scrollContainerRef.current;
+    if (!el || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect        = el.getBoundingClientRect();
+    const newScrollTop  = container.scrollTop + (elRect.top - containerRect.top) - STICKY_BAR_HEIGHT - 8;
+    container.scrollTo({ top: Math.max(0, newScrollTop), behavior: "smooth" });
+  }
+
+  // ── Derive form view from context ─────────────────────────────────────────
 
   const form: FormView = {
     basic: {
@@ -167,9 +220,7 @@ export function HospitalSetupPage() {
       },
       hospitalType: clinic.taxonomy.hospitalType,
     },
-    taxonomy: {
-      petTypes: clinic.taxonomy.petTypes,
-    },
+    taxonomy: { petTypes: clinic.taxonomy.petTypes },
     contact: {
       address: { ...clinic.contact.address },
       phone:   clinic.contact.phone,
@@ -178,12 +229,11 @@ export function HospitalSetupPage() {
     hours: clinic.hours,
   };
 
-  // ── Patch helpers — write straight to context ─────────────────────────────
+  // ── Patch helpers ─────────────────────────────────────────────────────────
 
   const patchBasic = useCallback((updates: Partial<BasicInfoData>) => {
     if (updates.general) {
       const g = updates.general;
-      // Auto-sync slug when name changes (unless slug was manually set)
       const autoSlug =
         g.name !== undefined &&
         (!clinic.general.slug || clinic.general.slug === toSlug(clinic.general.name ?? ""))
@@ -227,35 +277,32 @@ export function HospitalSetupPage() {
     setMigrationOpen(false);
   }, [clinic.general, updateGeneral, updateTaxonomy, updateContact, updateHours]);
 
-  // ── Active section renderer ───────────────────────────────────────────────
-
-  function renderSection() {
-    switch (activeSection) {
-      case "basic":
-        return <BasicInfoSection data={form.basic} onChange={patchBasic} />;
-      case "taxonomy":
-        return <TaxonomySection data={form.taxonomy} onChange={patchTaxonomy} />;
-      case "contact":
-        return <ContactSection data={form.contact} onChange={patchContact} />;
-      case "hours":
-        return <OperatingHoursSection value={form.hours} onChange={patchHours} />;
-    }
-  }
+  // ── Derived state ─────────────────────────────────────────────────────────
 
   const completedCount = SECTIONS.filter((s) => isSectionComplete(s.id, form)).length;
-  const activeConfig   = SECTIONS.find((s) => s.id === activeSection)!;
+  const coreComplete   = (["basic", "taxonomy", "contact", "hours"] as SectionId[]).every(
+    (id) => isSectionComplete(id, form)
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white font-sans antialiased">
-      {/* ── Sidebar ── */}
+    <div className="relative h-screen overflow-hidden bg-gray-100 flex font-sans antialiased">
+
+      {/* ── Left spacer — reserves floating panel footprint ── */}
+      <div className="shrink-0" style={{ width: 284 }} aria-hidden="true" />
+
+      {/* ── Floating Left Panel ── */}
       <aside
-        className="w-72 shrink-0 bg-white border-r border-gray-200 flex flex-col"
+        className="absolute left-3 top-3 bottom-3 z-30 w-[260px] rounded-2xl overflow-hidden bg-gray-100 flex flex-col"
+        style={{
+          boxShadow:
+            "0 4px 6px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.11), 0 0 0 1px rgba(0,0,0,0.05)",
+        }}
         aria-label="Setup navigation"
       >
         {/* Clinic identity */}
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <span
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -271,7 +318,7 @@ export function HospitalSetupPage() {
                 {form.basic.general.name || "New Clinic"}
               </p>
               <p className="text-xs text-gray-400 truncate font-mono">
-                {form.basic.general.slug || "your-slug"}
+                /{form.basic.general.slug || "your-slug"}
               </p>
             </div>
           </div>
@@ -301,42 +348,41 @@ export function HospitalSetupPage() {
           </div>
         </div>
 
-        {/* Section nav */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto" aria-label="Setup sections">
+        {/* Scroll-linked section nav */}
+        <nav className="flex-1 px-3 py-3 overflow-y-auto min-h-0" aria-label="Setup sections">
           <ul className="flex flex-col gap-0.5" role="list">
             {SECTIONS.map((section, index) => {
               const isActive = section.id === activeSection;
-              const isDone = isSectionComplete(section.id, form);
+              const isDone   = isSectionComplete(section.id, form);
 
               return (
                 <li key={section.id}>
                   <button
                     type="button"
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => scrollToSection(section.id)}
                     aria-current={isActive ? "page" : undefined}
                     className={[
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left",
-                      "transition-colors focus:outline-none focus-visible:ring-2",
-                      "focus-visible:ring-[#003459]",
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left",
+                      "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
                       isActive
-                        ? "bg-blue-50 text-[#003459]"
+                        ? "bg-blue-50/80 text-[#003459]"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                     ].join(" ")}
                   >
-                    {/* Step number / check */}
+                    {/* Step number / check icon */}
                     <span
                       className={[
-                        "w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
                         isDone
                           ? "bg-green-100 text-green-600"
                           : isActive
-                          ? "bg-blue-100 text-[#003459]"
+                          ? "bg-[#003459]/10 text-[#003459]"
                           : "bg-gray-100 text-gray-400",
                       ].join(" ")}
                       aria-hidden="true"
                     >
                       {isDone ? (
-                        <CheckCircle2 className="w-3 h-3" />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       ) : (
                         index + 1
                       )}
@@ -344,23 +390,32 @@ export function HospitalSetupPage() {
 
                     <div className="flex-1 overflow-hidden">
                       <p
-                        className={`text-sm font-medium truncate ${
-                          isActive ? "text-[#003459]" : ""
-                        }`}
+                        className={[
+                          "text-xs font-semibold truncate",
+                          isActive ? "text-[#003459]" : "text-gray-800",
+                        ].join(" ")}
                       >
                         {section.label}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-[10px] text-gray-400 truncate mt-0.5">
                         {section.description}
                       </p>
                     </div>
 
-                    {isActive && (
-                      <ChevronRight
-                        className="w-3.5 h-3.5 text-[#003459] shrink-0"
-                        aria-hidden="true"
-                      />
-                    )}
+                    <span className="ml-auto shrink-0">
+                      {isActive && (
+                        <ChevronRight
+                          className="w-3.5 h-3.5 text-[#003459]"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {isDone && !isActive && (
+                        <CheckCircle2
+                          className="w-3 h-3 text-green-500"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
                   </button>
                 </li>
               );
@@ -369,11 +424,11 @@ export function HospitalSetupPage() {
         </nav>
 
         {/* Import from existing site CTA */}
-        <div className="px-3 pb-2">
+        <div className="px-3 pb-2 shrink-0">
           <button
             type="button"
             onClick={() => setMigrationOpen(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-[#003459]/30 bg-[#003459]/4 hover:bg-[#003459]/8 hover:border-[#003459]/50 transition-all group"
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-[#003459]/30 bg-[#003459]/[0.03] hover:bg-[#003459]/[0.07] hover:border-[#003459]/50 transition-all group"
           >
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#003459] to-[#0369A1] flex items-center justify-center shrink-0">
               <Zap className="w-3.5 h-3.5 text-white" />
@@ -386,31 +441,30 @@ export function HospitalSetupPage() {
           </button>
         </div>
 
-        {/* Bottom: last-saved + publish hint */}
-        <div className="px-4 py-4 border-t border-gray-100">
-          {lastSaved ? (
-            <p className="text-xs text-gray-400 mb-3">
-              Saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </p>
-          ) : (
-            <p className="text-xs text-gray-400 mb-3">Not yet saved</p>
-          )}
-          {completedCount === SECTIONS.length ? (
+        {/* Save timestamp + Publish */}
+        <div className="px-4 py-4 border-t border-gray-100 shrink-0">
+          <p className="text-[10px] text-gray-400 mb-3">
+            {lastSaved
+              ? `Saved at ${lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              : "Not yet saved"}
+          </p>
+          {coreComplete ? (
             <button
               type="button"
-              className="w-full py-2 rounded-md text-sm font-semibold text-white transition-colors bg-[#003459] hover:bg-[#002845]"
+              onClick={publish}
+              className="w-full py-2 rounded-xl text-sm font-semibold text-white transition-colors bg-[#003459] hover:bg-[#002845]"
             >
               Publish Site →
             </button>
           ) : (
-            <p className="text-xs text-gray-400 text-center">
-              Complete all sections to publish
+            <p className="text-[10px] text-gray-400 text-center leading-relaxed">
+              Complete sections 1–4 to unlock publish
             </p>
           )}
         </div>
       </aside>
 
-      {/* ── Migration panel ── */}
+      {/* ── Migration panel overlay ── */}
       {migrationOpen && (
         <WebsiteMigrationPanel
           onClose={() => setMigrationOpen(false)}
@@ -418,54 +472,109 @@ export function HospitalSetupPage() {
         />
       )}
 
-      {/* ── Content area ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Section top bar */}
-        <header className="shrink-0 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="p-1.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-500">
-              <activeConfig.Icon className="w-4 h-4" aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-base font-semibold text-gray-900 leading-tight">
-                {activeConfig.label}
-              </h1>
-              <p className="text-xs text-gray-500">{activeConfig.description}</p>
-            </div>
-          </div>
+      {/* ── Main scroll container ── */}
+      <main
+        ref={(el) => { scrollContainerRef.current = el; }}
+        className="flex-1 overflow-y-auto"
+        aria-label="Hospital setup form"
+      >
+       
 
-          <div className="flex items-center gap-3">
-            {/* Next section shortcut */}
-            {(() => {
-              const idx = SECTIONS.findIndex((s) => s.id === activeSection);
-              const next = SECTIONS[idx + 1];
-              return next ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection(next.id)}
-                  className="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors"
-                >
-                  Next: {next.label}
-                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                </button>
-              ) : null;
-            })()}
+        {/* All sections stacked vertically */}
+        <div className="max-w-2xl mx-auto px-8 py-8">
 
-            <SaveButton state={saveStatus} onClick={triggerSave} />
-          </div>
-        </header>
+          {/* ── 1. Basic Information ── */}
+          <section
+            ref={(el) => { sectionRefs.current[0] = el; }}
+            data-section-id="basic"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Type}
+              label="Basic Information"
+              description="Name, slug, brand colours & logo"
+            />
+            <BasicInfoSection data={form.basic} onChange={patchBasic} />
+          </section>
 
-        {/* Scrollable form content */}
-        <main
-          id="setup-content"
-          className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50/50"
-          aria-label={`${activeConfig.label} form`}
-        >
-          <div className="max-w-2xl mx-auto pb-12">
-            {renderSection()}
-          </div>
-        </main>
-      </div>
+          {/* ── 2. Clinic Type & Pets ── */}
+          <section
+            ref={(el) => { sectionRefs.current[1] = el; }}
+            data-section-id="taxonomy"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Tags}
+              label="Clinic Type & Pets"
+              description="Hospital type & species treated"
+            />
+            <TaxonomySection data={form.taxonomy} onChange={patchTaxonomy} />
+          </section>
+
+          {/* ── 3. Location & Contact ── */}
+          <section
+            ref={(el) => { sectionRefs.current[2] = el; }}
+            data-section-id="contact"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={MapPin}
+              label="Location & Contact"
+              description="Address, phone & email"
+            />
+            <ContactSection data={form.contact} onChange={patchContact} />
+          </section>
+
+          {/* ── 4. Operating Hours ── */}
+          <section
+            ref={(el) => { sectionRefs.current[3] = el; }}
+            data-section-id="hours"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Clock}
+              label="Operating Hours"
+              description="Weekly availability schedule"
+            />
+            <OperatingHoursSection value={form.hours} onChange={patchHours} />
+          </section>
+
+          {/* ── 5. Integrations ── */}
+          <section
+            ref={(el) => { sectionRefs.current[4] = el; }}
+            data-section-id="integrations"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Settings}
+              label="Integrations"
+              description="Tracking, chatbots & consent management"
+            />
+            <IntegrationsSection
+              data={clinic.integrations}
+              onChange={updateIntegrations}
+            />
+          </section>
+
+          {/* ── 6. Footer & Policies ── */}
+          <section
+            ref={(el) => { sectionRefs.current[5] = el; }}
+            data-section-id="footer"
+            className="scroll-mt-[72px] pb-24"
+          >
+            <SectionHeader
+              icon={FileText}
+              label="Footer & Policies"
+              description="Links, newsletter subscription & legal pages"
+            />
+            <FooterPoliciesSection
+              data={clinic.footerConfig}
+              onChange={updateFooterConfig}
+            />
+          </section>
+
+        </div>
+      </main>
     </div>
   );
 }

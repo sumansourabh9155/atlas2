@@ -57,6 +57,27 @@ export interface SEOFields {
   focusKeyword: string;
 }
 
+export interface ClinicIntegrations {
+  pixelTrackingEnabled: boolean;
+  ottoEnabled: boolean;
+  ottoWidgetScript: string;
+  vetstoriaEnabled: boolean;
+  googleTagManagerEnabled: boolean;
+  facebookPixelEnabled: boolean;
+  microsoftClarityEnabled: boolean;
+  cookieConsentEnabled: boolean;
+}
+
+export interface ClinicFooterConfig {
+  subscriptionEnabled: boolean;
+  subscriptionHeading: string;
+  subscriptionLink: string;
+  additionalLinksEnabled: boolean;
+  additionalLinks: { name: string; link: string }[];
+  termsOfService: string;
+  privacyPolicy: string;
+}
+
 // ─── Internal state shape ──────────────────────────────────────────────────────
 
 interface ClinicState {
@@ -65,6 +86,8 @@ interface ClinicState {
   contact: ClinicContactCtx;
   hours: WeekSchedule | undefined;
   seo: SEOFields;
+  integrations: ClinicIntegrations;
+  footerConfig: ClinicFooterConfig;
   status: ClinicStatus;
 }
 
@@ -77,6 +100,8 @@ interface ClinicContextValue {
   updateContact: (patch: Partial<ClinicContactCtx>) => void;
   updateHours: (hours: WeekSchedule) => void;
   updateSEO: (patch: Partial<SEOFields>) => void;
+  updateIntegrations: (patch: Partial<ClinicIntegrations>) => void;
+  updateFooterConfig: (patch: Partial<ClinicFooterConfig>) => void;
   saveStatus: "idle" | "saving" | "saved" | "error";
   triggerSave: () => void;
   publish: () => void;
@@ -115,6 +140,25 @@ const DEFAULT_CLINIC: ClinicState = {
     robots: "index,follow",
     focusKeyword: "",
   },
+  integrations: {
+    pixelTrackingEnabled: false,
+    ottoEnabled: false,
+    ottoWidgetScript: "",
+    vetstoriaEnabled: false,
+    googleTagManagerEnabled: false,
+    facebookPixelEnabled: false,
+    microsoftClarityEnabled: false,
+    cookieConsentEnabled: false,
+  },
+  footerConfig: {
+    subscriptionEnabled: false,
+    subscriptionHeading: "",
+    subscriptionLink: "",
+    additionalLinksEnabled: false,
+    additionalLinks: [],
+    termsOfService: "",
+    privacyPolicy: "",
+  },
   status: "draft",
 };
 
@@ -139,6 +183,12 @@ function loadFromStorage(): ClinicState {
           address: { ...DEFAULT_CLINIC.contact.address, ...(saved.contact?.address ?? {}) },
         },
         seo: { ...DEFAULT_CLINIC.seo, ...(saved.seo ?? {}) },
+        integrations: { ...DEFAULT_CLINIC.integrations, ...(saved.integrations ?? {}) },
+        footerConfig: {
+          ...DEFAULT_CLINIC.footerConfig,
+          ...(saved.footerConfig ?? {}),
+          additionalLinks: (saved.footerConfig?.additionalLinks ?? DEFAULT_CLINIC.footerConfig.additionalLinks),
+        },
       };
     }
   } catch {
@@ -209,6 +259,17 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setClinic((prev) => ({ ...prev, seo: { ...prev.seo, ...patch } }));
   }, []);
 
+  const updateIntegrations = useCallback((patch: Partial<ClinicIntegrations>) => {
+    setClinic((prev) => ({ ...prev, integrations: { ...prev.integrations, ...patch } }));
+  }, []);
+
+  const updateFooterConfig = useCallback((patch: Partial<ClinicFooterConfig>) => {
+    setClinic((prev) => ({
+      ...prev,
+      footerConfig: { ...prev.footerConfig, ...patch },
+    }));
+  }, []);
+
   const triggerSave = useCallback(() => {
     setSaveStatus("saving");
     // Flush debounced write immediately, then show confirmation
@@ -238,6 +299,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         updateContact,
         updateHours,
         updateSEO,
+        updateIntegrations,
+        updateFooterConfig,
         saveStatus,
         triggerSave,
         publish,

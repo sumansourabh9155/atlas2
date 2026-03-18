@@ -121,7 +121,7 @@ function AppInner() {
                 : "bg-[#003459] hover:bg-[#002845]",
             ].join(" ")}
           >
-            {clinic.status === "published" ? "Published ✓" : "Publish"}
+            {clinic.status === "published" ? "Published ✓" : "Save and Next"}
           </button>
         </div>
       </div>
