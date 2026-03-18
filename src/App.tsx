@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { Settings2, Globe, PanelLeft, Check, Save, Loader2 } from "lucide-react";
+import { Settings2, Globe, PanelLeft, Check, Save, Loader2, ChevronRight } from "lucide-react";
 import { HospitalSetupPage } from "./components/HospitalSetup/HospitalSetupPage";
 import { WebsiteEditorPage } from "./components/WebsiteEditor/WebsiteEditorPage";
 import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
@@ -12,21 +12,30 @@ import { ClinicProvider, useClinic } from "./context/ClinicContext";
 type Mode = "setup" | "editor" | "domain";
 
 const MODES: { id: Mode; label: string; Icon: React.ElementType }[] = [
-  { id: "setup",  label: "Hospital Details",   Icon: Settings2 },
-  { id: "editor", label: "Website Editor",     Icon: PanelLeft },
-  { id: "domain", label: "Domain Management",  Icon: Globe     },
+  { id: "setup",  label: "Clinic Details",       Icon: Settings2 },
+  { id: "editor", label: "Website Builder",      Icon: PanelLeft },
+  { id: "domain", label: "Domain & Publishing",  Icon: Globe     },
 ];
 
 // ─── Inner app uses the clinic context ────────────────────────────────────────
 
 function AppInner() {
-  const [mode, setMode] = useState<Mode>("editor");
+  const [mode, setMode] = useState<Mode>("setup");
   const { clinic, saveStatus, triggerSave, publish } = useClinic();
 
   const saveBtnLabel =
     saveStatus === "saving" ? "Saving…"
     : saveStatus === "saved"  ? "Saved"
-    : "Save as Draft";
+    : "Save";
+
+  // Which step comes after the current one?
+  const NEXT_MODE: Partial<Record<Mode, Mode>> = { setup: "editor", editor: "domain" };
+  const NEXT_LABEL: Partial<Record<Mode, string>> = {
+    setup:  "Website Builder",
+    editor: "Domain & Publishing",
+  };
+  const nextMode  = NEXT_MODE[mode];
+  const nextLabel = NEXT_LABEL[mode];
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -95,6 +104,7 @@ function AppInner() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 justify-end">
+          {/* Save (always visible) */}
           <button
             type="button"
             onClick={triggerSave}
@@ -109,27 +119,56 @@ function AppInner() {
             }
             {saveBtnLabel}
           </button>
-          <button
-            type="button"
-            onClick={publish}
-            disabled={clinic.status === "published"}
-            className={[
-              "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1",
-              clinic.status === "published"
-                ? "bg-green-600 cursor-default"
-                : "bg-[#003459] hover:bg-[#002845]",
-            ].join(" ")}
-          >
-            {clinic.status === "published" ? "Published ✓" : "Save and Next"}
-          </button>
+
+          {/* Save & Next — only on steps 1 and 2 */}
+          {nextMode && (
+            <button
+              type="button"
+              onClick={() => { triggerSave(); setMode(nextMode); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-[#003459] hover:bg-[#002845] rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1"
+            >
+              Save &amp; Next
+              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          )}
+
+          {/* Publish — only on Domain & Publishing step */}
+          {mode === "domain" && (
+            <button
+              type="button"
+              onClick={publish}
+              disabled={clinic.status === "published"}
+              className={[
+                "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+                clinic.status === "published"
+                  ? "bg-green-600 cursor-default focus-visible:ring-green-600"
+                  : "bg-[#003459] hover:bg-[#002845] focus-visible:ring-[#003459]",
+              ].join(" ")}
+            >
+              {clinic.status === "published" ? (
+                <><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</>
+              ) : (
+                <><Globe className="w-3.5 h-3.5" aria-hidden="true" /> Publish Site</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-hidden">
-        {mode === "setup"  && <HospitalSetupPage />}
-        {mode === "editor" && <WebsiteEditorPage onNavigateToSetup={() => setMode("setup")} />}
+        {mode === "setup"  && (
+          <HospitalSetupPage
+            onNext={() => { triggerSave(); setMode("editor"); }}
+          />
+        )}
+        {mode === "editor" && (
+          <WebsiteEditorPage
+            onNavigateToSetup={() => setMode("setup")}
+            onNext={() => { triggerSave(); setMode("domain"); }}
+          />
+        )}
         {mode === "domain" && <DomainManagementPage />}
       </div>
     </div>

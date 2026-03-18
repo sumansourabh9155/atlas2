@@ -3,6 +3,7 @@ import { LeftPanel } from "./LeftPanel";
 import { LivePreviewPane } from "./LivePreviewPane";
 import { RightPanel } from "./RightPanel";
 import { mockClinicData } from "../../data/mockClinic";
+import { VET_CATALOGUE, SERVICE_CATALOGUE } from "../../data/catalogue";
 import type { PreviewTheme } from "./LivePreviewPane";
 import { useClinic } from "../../context/ClinicContext";
 import { AIEditorContext, SECTION_LABELS } from "./ai/AIEditorContext";
@@ -118,26 +119,23 @@ export type ViewportMode = "desktop" | "tablet" | "mobile";
 
 // ─── Initial states ────────────────────────────────────────────────────────────
 
-// Safe hero block extraction — handles the case where no hero block exists in mock data
-const rawHeroBlock = mockClinicData.blocks.find((b) => b.type === "hero");
-const heroBlock = rawHeroBlock?.type === "hero" ? rawHeroBlock : null;
-
+// Hero defaults — clinic name/tagline will be seeded via useEffect once context loads
 const INITIAL_HERO: HeroEditorState = {
-  headline:        heroBlock?.headline        ?? "Compassionate Care for Your Beloved Pets",
-  subheadline:     heroBlock?.subheadline     ?? "Trusted veterinary expertise — right in your neighborhood.",
-  badgeText:       heroBlock?.badgeText       ?? "",
-  backgroundValue: heroBlock?.backgroundValue ?? "",
-  overlayOpacity:  heroBlock?.overlayOpacity  ?? 0.5,
-  layout:          (heroBlock?.layout as HeroEditorState["layout"]) ?? "centered",
+  headline:        "Compassionate Care for Your Beloved Pets",
+  subheadline:     "Trusted veterinary expertise — right in your neighborhood.",
+  badgeText:       "",
+  backgroundValue: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1600&auto=format&fit=crop&q=80",
+  overlayOpacity:  0.55,
+  layout:          "centered",
   primaryCta: {
-    enabled: !!heroBlock?.primaryCta,
-    label:   heroBlock?.primaryCta?.label ?? "Book an Appointment",
-    href:    heroBlock?.primaryCta?.href  ?? "#contact",
+    enabled: true,
+    label:   "Book an Appointment",
+    href:    "#contact",
   },
   secondaryCta: {
-    enabled: !!heroBlock?.secondaryCta,
-    label:   heroBlock?.secondaryCta?.label ?? "Explore Our Services",
-    href:    heroBlock?.secondaryCta?.href  ?? "#services",
+    enabled: true,
+    label:   "Explore Our Services",
+    href:    "#services",
   },
 };
 
@@ -200,6 +198,7 @@ const INITIAL_SEO: SEOState = {
 
 interface WebsiteEditorPageProps {
   onNavigateToSetup: () => void;
+  onNext?: () => void;
 }
 
 export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps) {
@@ -225,6 +224,44 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     if (clinicCtx.general.primaryColor)   setPrimaryColor(clinicCtx.general.primaryColor);
     if (clinicCtx.general.secondaryColor) setSecondaryColor(clinicCtx.general.secondaryColor);
   }, [clinicCtx.general.primaryColor, clinicCtx.general.secondaryColor]);
+
+  // Seed hero headline/subheadline from clinic name & tagline (only when still on defaults)
+  const heroSeededRef = useRef(false);
+  useEffect(() => {
+    if (heroSeededRef.current) return;
+    const name    = clinicCtx.general.name?.trim();
+    const tagline = clinicCtx.general.tagline?.trim();
+    if (!name) return; // wait until the user has filled in the clinic name
+    heroSeededRef.current = true;
+    setHeroState(prev => ({
+      ...prev,
+      headline:    name    ? `Welcome to ${name}`                                              : prev.headline,
+      subheadline: tagline ? tagline                                                            : prev.subheadline,
+      badgeText:   clinicCtx.taxonomy.hospitalType !== "general_practice"
+        ? `⭐ ${name}`
+        : prev.badgeText,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinicCtx.general.name, clinicCtx.general.tagline]);
+
+  // Keep SEO state in sync with context (context is the persistence layer)
+  useEffect(() => {
+    setSeoState({
+      metaTitle:       clinicCtx.seo.metaTitle       || (clinicCtx.general.name ? `${clinicCtx.general.name} | Veterinary Clinic` : ""),
+      metaDescription: clinicCtx.seo.metaDescription || clinicCtx.general.metaDescription || "",
+      ogImageUrl:      clinicCtx.seo.ogImageUrl      || clinicCtx.general.logoUrl          || "",
+      canonicalUrl:    clinicCtx.seo.canonicalUrl    || (clinicCtx.general.slug ? `https://${clinicCtx.general.slug}.vet` : ""),
+      robots:          clinicCtx.seo.robots          || "index,follow",
+      focusKeyword:    clinicCtx.seo.focusKeyword    || "",
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    clinicCtx.seo,
+    clinicCtx.general.name,
+    clinicCtx.general.metaDescription,
+    clinicCtx.general.logoUrl,
+    clinicCtx.general.slug,
+  ]);
 
   // Section content states
   const [heroState,         setHeroState]         = useState<HeroEditorState>(INITIAL_HERO);
@@ -305,36 +342,99 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     setPendingFocusKey(fieldKey);
   }, []);
 
-  // Effective clinic — context identity + editor color overrides + mock vets/services/blocks
+  // ── Effective clinic — fully driven by context, falls back to mock only when empty ──
+
+  // Map selected vet IDs → full Veterinarian objects from the shared catalogue
+  const effectiveVets = useMemo(() => {
+    const ids = clinicCtx.vetsConfig.selectedVetIds;
+    if (ids.length === 0) return mockClinicData.veterinarians;
+    return ids
+      .map((id, idx) => {
+        const vet = VET_CATALOGUE[id];
+        if (!vet) return null;
+        return { ...vet, order: idx, isVisible: true };
+      })
+      .filter(Boolean) as typeof mockClinicData.veterinarians;
+  }, [clinicCtx.vetsConfig.selectedVetIds]);
+
+  // Map selected service IDs from all enabled groups → unique Service objects
+  const effectiveServices = useMemo(() => {
+    const allIds: string[] = [];
+    clinicCtx.servicesConfig.serviceGroups.forEach((group) => {
+      if (group.enabled) {
+        group.selectedServiceIds.forEach((id) => {
+          if (!allIds.includes(id)) allIds.push(id);
+        });
+      }
+    });
+    if (allIds.length === 0) return mockClinicData.services;
+    return allIds
+      .map((id, idx) => {
+        const svc = SERVICE_CATALOGUE[id];
+        if (!svc) return null;
+        return { ...svc, order: idx, isVisible: true };
+      })
+      .filter(Boolean) as typeof mockClinicData.services;
+  }, [clinicCtx.servicesConfig.serviceGroups]);
+
+  // Convert WeekSchedule → businessHours array format used by the schema
+  const effectiveBusinessHours = useMemo(() => {
+    const schedule = clinicCtx.hours;
+    if (!schedule) return mockClinicData.contact.businessHours;
+    const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
+    return DAYS.map((day) => {
+      const s = schedule[day];
+      if (!s) return { day, open: "08:00", close: "17:00", isClosed: false };
+      return {
+        day,
+        open:     s.is24Hours ? "00:00" : (s.slots[0]?.open  ?? "08:00"),
+        close:    s.is24Hours ? "23:59" : (s.slots[0]?.close ?? "17:00"),
+        isClosed: s.isClosed,
+      };
+    });
+  }, [clinicCtx.hours]);
+
   const effectiveClinic = useMemo(
     () => ({
       ...mockClinicData,
       general: {
         ...mockClinicData.general,
-        // Prefer context identity fields; fall back to mock data defaults
         name:            clinicCtx.general.name    || mockClinicData.general.name,
         slug:            clinicCtx.general.slug    || mockClinicData.general.slug,
         tagline:         clinicCtx.general.tagline ?? mockClinicData.general.tagline,
         logoUrl:         clinicCtx.general.logoUrl ?? mockClinicData.general.logoUrl,
+        metaDescription: clinicCtx.general.metaDescription ?? mockClinicData.general.metaDescription,
         primaryColor,
         secondaryColor,
       },
       taxonomy: {
-        hospitalType: clinicCtx.taxonomy.hospitalType,
+        hospitalType: clinicCtx.taxonomy.hospitalType || mockClinicData.taxonomy.hospitalType,
         petTypes: clinicCtx.taxonomy.petTypes.length > 0
           ? clinicCtx.taxonomy.petTypes
           : mockClinicData.taxonomy.petTypes,
       },
-      contact: (clinicCtx.contact.phone || clinicCtx.contact.email)
-        ? {
-            ...mockClinicData.contact,
-            address: { ...mockClinicData.contact.address, ...clinicCtx.contact.address },
-            phone:   clinicCtx.contact.phone  || mockClinicData.contact.phone,
-            email:   clinicCtx.contact.email  || mockClinicData.contact.email,
-          }
-        : mockClinicData.contact,
+      contact: {
+        address: {
+          ...mockClinicData.contact.address,
+          ...clinicCtx.contact.address,
+          // Only override individual fields when context has values
+          street:      clinicCtx.contact.address.street  || mockClinicData.contact.address.street,
+          city:        clinicCtx.contact.address.city    || mockClinicData.contact.address.city,
+          state:       clinicCtx.contact.address.state   || mockClinicData.contact.address.state,
+          zip:         clinicCtx.contact.address.zip     || mockClinicData.contact.address.zip,
+          country:     clinicCtx.contact.address.country || mockClinicData.contact.address.country,
+          mapEmbedUrl: clinicCtx.contact.address.mapEmbedUrl || mockClinicData.contact.address.mapEmbedUrl,
+        },
+        phone:          clinicCtx.contact.phone          || mockClinicData.contact.phone,
+        emergencyPhone: clinicCtx.contact.emergencyPhone || mockClinicData.contact.emergencyPhone,
+        email:          clinicCtx.contact.email          || mockClinicData.contact.email,
+        website:        clinicCtx.contact.website        || mockClinicData.contact.website,
+        businessHours:  effectiveBusinessHours,
+      },
+      veterinarians: effectiveVets,
+      services:      effectiveServices,
     }),
-    [clinicCtx, primaryColor, secondaryColor]
+    [clinicCtx, primaryColor, secondaryColor, effectiveVets, effectiveServices, effectiveBusinessHours]
   );
 
   // ── AI handler ────────────────────────────────────────────────────────────────

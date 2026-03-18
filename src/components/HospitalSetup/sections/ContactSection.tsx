@@ -1,6 +1,6 @@
 import { MapPin, Phone, Mail, Globe } from "lucide-react";
 import { FormField } from "../ui/FormField";
-import type { ClinicContact } from "../../../types/clinic";
+import type { ClinicContactCtx } from "../../../context/ClinicContext";
 
 const INPUT =
   "w-full h-9 px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg " +
@@ -38,7 +38,7 @@ function SectionCard({
   );
 }
 
-export type ContactData = Omit<ClinicContact, "businessHours">;
+export type ContactData = ClinicContactCtx;
 
 interface Props {
   data: ContactData;
@@ -142,6 +142,29 @@ export function ContactSection({ data, onChange }: Props) {
             placeholder="United States"
             autoComplete="country-name"
           />
+        </FormField>
+
+        <FormField
+          label="Google Maps Embed URL"
+          htmlFor="mapEmbedUrl"
+          hint="Paste the embed URL from Google Maps → Share → Embed a map. Shown in your contact section."
+          optional
+        >
+          <div className="relative">
+            <MapPin
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="mapEmbedUrl"
+              name="address.mapEmbedUrl"
+              type="url"
+              value={address.mapEmbedUrl ?? ""}
+              onChange={(e) => setAddress({ mapEmbedUrl: e.target.value || undefined })}
+              className={`${INPUT} pl-8`}
+              placeholder="https://www.google.com/maps/embed?pb=..."
+            />
+          </div>
         </FormField>
       </SectionCard>
 

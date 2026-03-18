@@ -3,11 +3,14 @@ import {
   Type, Tags, MapPin, Clock,
   CheckCircle2, Save, ChevronRight,
   AlertCircle, Zap, Settings, FileText,
+  Briefcase, Users,
 } from "lucide-react";
 import { BasicInfoSection, toSlug, type BasicInfoData } from "./sections/BasicInfoSection";
 import { TaxonomySection, type TaxonomyData } from "./sections/TaxonomySection";
 import { ContactSection, type ContactData } from "./sections/ContactSection";
 import { OperatingHoursSection } from "./sections/OperatingHoursSection";
+import { ServicesSection } from "./sections/ServicesSection";
+import { VetsSection } from "./sections/VetsSection";
 import { IntegrationsSection } from "./sections/IntegrationsSection";
 import { FooterPoliciesSection } from "./sections/FooterPoliciesSection";
 import { WebsiteMigrationPanel, type ImportPayload } from "./WebsiteMigrationPanel";
@@ -16,7 +19,7 @@ import { useClinic } from "../../context/ClinicContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SectionId = "basic" | "taxonomy" | "contact" | "hours" | "integrations" | "footer";
+type SectionId = "basic" | "taxonomy" | "contact" | "hours" | "services" | "vets" | "integrations" | "footer";
 
 /** View-layer form shape — derived from context, passed to section components unchanged. */
 interface FormView {
@@ -37,9 +40,11 @@ const SECTIONS: {
   { id: "basic",        label: "Basic Information",  description: "Name, slug, colors & logo",       Icon: Type     },
   { id: "taxonomy",     label: "Clinic Type & Pets", description: "Hospital type & species treated",  Icon: Tags     },
   { id: "contact",      label: "Location & Contact", description: "Address, phone & email",           Icon: MapPin   },
-  { id: "hours",        label: "Operating Hours",    description: "Weekly availability schedule",     Icon: Clock    },
-  { id: "integrations", label: "Integrations",       description: "Tracking, chatbots & consent",    Icon: Settings },
-  { id: "footer",       label: "Footer & Policies",  description: "Links, subscription & legal",      Icon: FileText },
+  { id: "hours",        label: "Operating Hours",    description: "Weekly availability schedule",     Icon: Clock      },
+  { id: "services",     label: "Available Services", description: "Services offered at this location", Icon: Briefcase  },
+  { id: "vets",         label: "Veterinarians",       description: "Team members at this location",    Icon: Users      },
+  { id: "integrations", label: "Integrations",        description: "Tracking, chatbots & consent",    Icon: Settings   },
+  { id: "footer",       label: "Footer & Policies",   description: "Links, subscription & legal",      Icon: FileText   },
 ];
 
 const STICKY_BAR_HEIGHT = 57; // px — height of the sticky save bar
@@ -65,6 +70,8 @@ function isSectionComplete(id: SectionId, form: FormView): boolean {
       );
     case "hours":
       return form.hours !== undefined;
+    case "services":
+    case "vets":
     case "integrations":
     case "footer":
       return true; // All optional — always green
@@ -137,7 +144,11 @@ function SectionHeader({
 
 // ─── HospitalSetupPage ────────────────────────────────────────────────────────
 
-export function HospitalSetupPage() {
+interface HospitalSetupPageProps {
+  onNext?: () => void;
+}
+
+export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
   const {
     clinic,
     updateGeneral,
@@ -146,9 +157,10 @@ export function HospitalSetupPage() {
     updateHours,
     updateIntegrations,
     updateFooterConfig,
+    updateServicesConfig,
+    updateVetsConfig,
     saveStatus,
     triggerSave,
-    publish,
   } = useClinic();
 
   const [activeSection, setActiveSection] = useState<SectionId>("basic");
@@ -280,9 +292,6 @@ export function HospitalSetupPage() {
   // ── Derived state ─────────────────────────────────────────────────────────
 
   const completedCount = SECTIONS.filter((s) => isSectionComplete(s.id, form)).length;
-  const coreComplete   = (["basic", "taxonomy", "contact", "hours"] as SectionId[]).every(
-    (id) => isSectionComplete(id, form)
-  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -294,7 +303,7 @@ export function HospitalSetupPage() {
 
       {/* ── Floating Left Panel ── */}
       <aside
-        className="absolute left-3 top-3 bottom-3 z-30 w-[260px] rounded-2xl overflow-hidden bg-gray-100 flex flex-col"
+        className="absolute left-3 top-3 bottom-16 z-30 w-[260px] rounded-2xl overflow-hidden bg-white flex flex-col"
         style={{
           boxShadow:
             "0 4px 6px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.11), 0 0 0 1px rgba(0,0,0,0.05)",
@@ -441,26 +450,13 @@ export function HospitalSetupPage() {
           </button>
         </div>
 
-        {/* Save timestamp + Publish */}
-        <div className="px-4 py-4 border-t border-gray-100 shrink-0">
-          <p className="text-[10px] text-gray-400 mb-3">
+        {/* Save timestamp */}
+        <div className="px-4 py-2 border-t border-gray-100 shrink-0">
+          <p className="text-[10px] text-gray-400">
             {lastSaved
               ? `Saved at ${lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
               : "Not yet saved"}
           </p>
-          {coreComplete ? (
-            <button
-              type="button"
-              onClick={publish}
-              className="w-full py-2 rounded-xl text-sm font-semibold text-white transition-colors bg-[#003459] hover:bg-[#002845]"
-            >
-              Publish Site →
-            </button>
-          ) : (
-            <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-              Complete sections 1–4 to unlock publish
-            </p>
-          )}
         </div>
       </aside>
 
@@ -475,13 +471,11 @@ export function HospitalSetupPage() {
       {/* ── Main scroll container ── */}
       <main
         ref={(el) => { scrollContainerRef.current = el; }}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto bg-gray-100"
         aria-label="Hospital setup form"
       >
-       
-
         {/* All sections stacked vertically */}
-        <div className="max-w-2xl mx-auto px-8 py-8">
+        <div className="max-w-2xl mx-auto px-8 py-10">
 
           {/* ── 1. Basic Information ── */}
           <section
@@ -539,9 +533,43 @@ export function HospitalSetupPage() {
             <OperatingHoursSection value={form.hours} onChange={patchHours} />
           </section>
 
-          {/* ── 5. Integrations ── */}
+          {/* ── 5. Available Services ── */}
           <section
             ref={(el) => { sectionRefs.current[4] = el; }}
+            data-section-id="services"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Briefcase}
+              label="Available Services"
+              description="Services offered at this location"
+            />
+            <ServicesSection
+              data={clinic.servicesConfig}
+              onChange={updateServicesConfig}
+            />
+          </section>
+
+          {/* ── 6. Veterinarians ── */}
+          <section
+            ref={(el) => { sectionRefs.current[5] = el; }}
+            data-section-id="vets"
+            className="scroll-mt-[72px] pb-16"
+          >
+            <SectionHeader
+              icon={Users}
+              label="Veterinarians"
+              description="Team members at this location"
+            />
+            <VetsSection
+              data={clinic.vetsConfig}
+              onChange={updateVetsConfig}
+            />
+          </section>
+
+          {/* ── 7. Integrations ── */}
+          <section
+            ref={(el) => { sectionRefs.current[6] = el; }}
             data-section-id="integrations"
             className="scroll-mt-[72px] pb-16"
           >
@@ -556,9 +584,9 @@ export function HospitalSetupPage() {
             />
           </section>
 
-          {/* ── 6. Footer & Policies ── */}
+          {/* ── 8. Footer & Policies ── */}
           <section
-            ref={(el) => { sectionRefs.current[5] = el; }}
+            ref={(el) => { sectionRefs.current[7] = el; }}
             data-section-id="footer"
             className="scroll-mt-[72px] pb-24"
           >

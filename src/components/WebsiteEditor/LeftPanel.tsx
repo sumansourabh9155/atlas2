@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useClinic } from "../../context/ClinicContext";
 import {
   ChevronDown, Search,
   PanelLeftClose, PanelLeftOpen,
@@ -509,6 +510,13 @@ export function LeftPanel({
   const [tab, setTab] = useState<"pages" | "templates">("pages");
   const [isCollapsedInternal, setIsCollapsedInternal] = useState(false);
 
+  // Save-status indicator — mirrors the pattern used in HospitalSetupPage
+  const { saveStatus } = useClinic();
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  useEffect(() => {
+    if (saveStatus === "saved") setLastSaved(new Date());
+  }, [saveStatus]);
+
   const isCollapsed = isCollapsedProp !== undefined ? isCollapsedProp : isCollapsedInternal;
   const setIsCollapsed = (v: boolean) => {
     if (onCollapsedChange) onCollapsedChange(v);
@@ -575,6 +583,15 @@ export function LeftPanel({
           />
         )
       }
+
+      {/* Save timestamp */}
+      <div className="px-4 py-3 border-t border-gray-100 shrink-0">
+        <p className="text-[10px] text-gray-400">
+          {lastSaved
+            ? `Saved at ${lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+            : "Not yet saved"}
+        </p>
+      </div>
     </aside>
   );
 }

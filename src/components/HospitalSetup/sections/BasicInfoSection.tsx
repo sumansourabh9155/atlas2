@@ -392,39 +392,6 @@ export function BasicInfoSection({ data, onChange }: Props) {
         </FormField>
       </SectionCard>
 
-      {/* ── Branding ── */}
-      <SectionCard
-        icon={Palette}
-        title="Brand Colors"
-        description="Your primary color is used for buttons, highlights, and accent elements across your site."
-      >
-        <FormField
-          label="Primary Color"
-          htmlFor="primaryColor"
-          hint="Choose a color that meets WCAG AA contrast on white backgrounds."
-          required
-        >
-          <ColorPickerField
-            value={general.primaryColor}
-            onChange={(hex) => setGeneral({ primaryColor: hex })}
-            name="primaryColor"
-          />
-        </FormField>
-
-        <FormField
-          label="Secondary / Accent Color"
-          htmlFor="secondaryColor"
-          hint="Used sparingly for highlights, badges, and calls-to-action."
-          optional
-        >
-          <ColorPickerField
-            value={general.secondaryColor ?? "#F59E0B"}
-            onChange={(hex) => setGeneral({ secondaryColor: hex })}
-            name="secondaryColor"
-          />
-        </FormField>
-      </SectionCard>
-
       {/* ── Logo ── */}
       <SectionCard
         icon={Image}

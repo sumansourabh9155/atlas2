@@ -38,14 +38,19 @@ export interface ClinicTaxonomyCtx {
 export interface ClinicContactCtx {
   address: {
     street: string;
+    street2?: string;
     city: string;
     state: string;
     zip: string;
     country: string;
+    /** Google Maps embed URL — used in the contact / location section preview */
+    mapEmbedUrl?: string;
   };
   phone: string;
   email: string;
   emergencyPhone?: string;
+  /** Existing website URL, if any */
+  website?: string;
 }
 
 export interface SEOFields {
@@ -78,6 +83,25 @@ export interface ClinicFooterConfig {
   privacyPolicy: string;
 }
 
+// ─── Services & Vets config ───────────────────────────────────────────────────
+
+export interface ServiceGroup {
+  id: string;
+  enabled: boolean;
+  name: string;
+  selectedServiceIds: string[];
+}
+
+export interface ClinicServicesConfig {
+  pricingEnabled: boolean;
+  pricingUrl: string;
+  serviceGroups: ServiceGroup[];
+}
+
+export interface ClinicVetsConfig {
+  selectedVetIds: string[];
+}
+
 // ─── Internal state shape ──────────────────────────────────────────────────────
 
 interface ClinicState {
@@ -88,6 +112,8 @@ interface ClinicState {
   seo: SEOFields;
   integrations: ClinicIntegrations;
   footerConfig: ClinicFooterConfig;
+  servicesConfig: ClinicServicesConfig;
+  vetsConfig: ClinicVetsConfig;
   status: ClinicStatus;
 }
 
@@ -102,6 +128,8 @@ interface ClinicContextValue {
   updateSEO: (patch: Partial<SEOFields>) => void;
   updateIntegrations: (patch: Partial<ClinicIntegrations>) => void;
   updateFooterConfig: (patch: Partial<ClinicFooterConfig>) => void;
+  updateServicesConfig: (patch: Partial<ClinicServicesConfig>) => void;
+  updateVetsConfig: (patch: Partial<ClinicVetsConfig>) => void;
   saveStatus: "idle" | "saving" | "saved" | "error";
   triggerSave: () => void;
   publish: () => void;
@@ -123,13 +151,17 @@ const DEFAULT_CLINIC: ClinicState = {
   contact: {
     address: {
       street: "",
+      street2: "",
       city: "",
       state: "",
       zip: "",
       country: "United States",
+      mapEmbedUrl: "",
     },
     phone: "",
     email: "",
+    emergencyPhone: "",
+    website: "",
   },
   hours: undefined,
   seo: {
@@ -159,6 +191,14 @@ const DEFAULT_CLINIC: ClinicState = {
     termsOfService: "",
     privacyPolicy: "",
   },
+  servicesConfig: {
+    pricingEnabled: false,
+    pricingUrl: "",
+    serviceGroups: [{ id: "grp-1", enabled: true, name: "", selectedServiceIds: [] }],
+  },
+  vetsConfig: {
+    selectedVetIds: [],
+  },
   status: "draft",
 };
 
@@ -180,7 +220,10 @@ function loadFromStorage(): ClinicState {
         contact: {
           ...DEFAULT_CLINIC.contact,
           ...(saved.contact ?? {}),
-          address: { ...DEFAULT_CLINIC.contact.address, ...(saved.contact?.address ?? {}) },
+          address: {
+            ...DEFAULT_CLINIC.contact.address,
+            ...(saved.contact?.address ?? {}),
+          },
         },
         seo: { ...DEFAULT_CLINIC.seo, ...(saved.seo ?? {}) },
         integrations: { ...DEFAULT_CLINIC.integrations, ...(saved.integrations ?? {}) },
@@ -188,6 +231,15 @@ function loadFromStorage(): ClinicState {
           ...DEFAULT_CLINIC.footerConfig,
           ...(saved.footerConfig ?? {}),
           additionalLinks: (saved.footerConfig?.additionalLinks ?? DEFAULT_CLINIC.footerConfig.additionalLinks),
+        },
+        servicesConfig: {
+          ...DEFAULT_CLINIC.servicesConfig,
+          ...(saved.servicesConfig ?? {}),
+          serviceGroups: saved.servicesConfig?.serviceGroups ?? DEFAULT_CLINIC.servicesConfig.serviceGroups,
+        },
+        vetsConfig: {
+          ...DEFAULT_CLINIC.vetsConfig,
+          ...(saved.vetsConfig ?? {}),
         },
       };
     }
@@ -270,6 +322,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateServicesConfig = useCallback((patch: Partial<ClinicServicesConfig>) => {
+    setClinic((prev) => ({ ...prev, servicesConfig: { ...prev.servicesConfig, ...patch } }));
+  }, []);
+
+  const updateVetsConfig = useCallback((patch: Partial<ClinicVetsConfig>) => {
+    setClinic((prev) => ({ ...prev, vetsConfig: { ...prev.vetsConfig, ...patch } }));
+  }, []);
+
   const triggerSave = useCallback(() => {
     setSaveStatus("saving");
     // Flush debounced write immediately, then show confirmation
@@ -301,6 +361,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         updateSEO,
         updateIntegrations,
         updateFooterConfig,
+        updateServicesConfig,
+        updateVetsConfig,
         saveStatus,
         triggerSave,
         publish,
