@@ -394,6 +394,27 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
     });
   }, [clinicCtx.hours]);
 
+  // Build a live navigation block from context so the preview stays in sync
+  // with the pages list + nav config settings.
+  const effectiveNavBlock = useMemo(() => ({
+    blockId: "blk-nav-0000-0000-000000000001",
+    type: "navigation" as const,
+    isVisible: true,
+    order: 0,
+    showClinicName: clinicCtx.navConfig.showClinicName,
+    links: clinicCtx.navLinks.map(l => ({
+      label: l.label,
+      href:  l.href,
+      openInNewTab: l.openInNewTab,
+    })),
+    ctaButton: clinicCtx.navConfig.ctaHref
+      ? { label: clinicCtx.navConfig.ctaLabel, href: clinicCtx.navConfig.ctaHref }
+      : undefined,
+    isSticky:               clinicCtx.navConfig.isSticky,
+    isTransparentOnScroll:  clinicCtx.navConfig.isTransparentOnScroll,
+    colorScheme:            clinicCtx.navConfig.colorScheme,
+  }), [clinicCtx.navLinks, clinicCtx.navConfig]);
+
   const effectiveClinic = useMemo(
     () => ({
       ...mockClinicData,
@@ -433,8 +454,13 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
       },
       veterinarians: effectiveVets,
       services:      effectiveServices,
+      // Replace the static nav block with a live one built from context
+      blocks: [
+        effectiveNavBlock,
+        ...mockClinicData.blocks.filter(b => b.type !== "navigation"),
+      ],
     }),
-    [clinicCtx, primaryColor, secondaryColor, effectiveVets, effectiveServices, effectiveBusinessHours]
+    [clinicCtx, primaryColor, secondaryColor, effectiveVets, effectiveServices, effectiveBusinessHours, effectiveNavBlock]
   );
 
   // ── AI handler ────────────────────────────────────────────────────────────────

@@ -53,6 +53,24 @@ export interface ClinicContactCtx {
   website?: string;
 }
 
+// ─── Navigation state ────────────────────────────────────────────────────────
+
+export interface NavLinkCtx {
+  id: string;
+  label: string;
+  href: string;
+  openInNewTab: boolean;
+}
+
+export interface NavConfigCtx {
+  isSticky: boolean;
+  isTransparentOnScroll: boolean;
+  colorScheme: "light" | "dark" | "brand";
+  showClinicName: boolean;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
 export interface SEOFields {
   metaTitle: string;
   metaDescription: string;
@@ -114,6 +132,8 @@ interface ClinicState {
   footerConfig: ClinicFooterConfig;
   servicesConfig: ClinicServicesConfig;
   vetsConfig: ClinicVetsConfig;
+  navLinks: NavLinkCtx[];
+  navConfig: NavConfigCtx;
   status: ClinicStatus;
 }
 
@@ -130,6 +150,8 @@ interface ClinicContextValue {
   updateFooterConfig: (patch: Partial<ClinicFooterConfig>) => void;
   updateServicesConfig: (patch: Partial<ClinicServicesConfig>) => void;
   updateVetsConfig: (patch: Partial<ClinicVetsConfig>) => void;
+  updateNavLinks: (links: NavLinkCtx[]) => void;
+  updateNavConfig: (patch: Partial<NavConfigCtx>) => void;
   saveStatus: "idle" | "saving" | "saved" | "error";
   triggerSave: () => void;
   publish: () => void;
@@ -199,6 +221,23 @@ const DEFAULT_CLINIC: ClinicState = {
   vetsConfig: {
     selectedVetIds: [],
   },
+  navLinks: [
+    { id: "home",             label: "Home",             href: "/",         openInNewTab: false },
+    { id: "about-us",         label: "About Us",         href: "/about",    openInNewTab: false },
+    { id: "services",         label: "Services",         href: "/services", openInNewTab: false },
+    { id: "book-appointment", label: "Book Appointment", href: "/book",     openInNewTab: false },
+    { id: "blog",             label: "Blog",             href: "/blog",     openInNewTab: false },
+    { id: "faqs",             label: "FAQs",             href: "/faqs",     openInNewTab: false },
+    { id: "forums",           label: "Forums",           href: "/forums",   openInNewTab: false },
+  ],
+  navConfig: {
+    isSticky: true,
+    isTransparentOnScroll: true,
+    colorScheme: "light",
+    showClinicName: true,
+    ctaLabel: "Book Appointment",
+    ctaHref: "#contact",
+  },
   status: "draft",
 };
 
@@ -241,6 +280,8 @@ function loadFromStorage(): ClinicState {
           ...DEFAULT_CLINIC.vetsConfig,
           ...(saved.vetsConfig ?? {}),
         },
+        navLinks: saved.navLinks ?? DEFAULT_CLINIC.navLinks,
+        navConfig: { ...DEFAULT_CLINIC.navConfig, ...(saved.navConfig ?? {}) },
       };
     }
   } catch {
@@ -330,6 +371,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setClinic((prev) => ({ ...prev, vetsConfig: { ...prev.vetsConfig, ...patch } }));
   }, []);
 
+  const updateNavLinks = useCallback((links: NavLinkCtx[]) => {
+    setClinic((prev) => ({ ...prev, navLinks: links }));
+  }, []);
+
+  const updateNavConfig = useCallback((patch: Partial<NavConfigCtx>) => {
+    setClinic((prev) => ({ ...prev, navConfig: { ...prev.navConfig, ...patch } }));
+  }, []);
+
   const triggerSave = useCallback(() => {
     setSaveStatus("saving");
     // Flush debounced write immediately, then show confirmation
@@ -363,6 +412,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         updateFooterConfig,
         updateServicesConfig,
         updateVetsConfig,
+        updateNavLinks,
+        updateNavConfig,
         saveStatus,
         triggerSave,
         publish,

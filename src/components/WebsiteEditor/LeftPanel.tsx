@@ -30,11 +30,11 @@ const INITIAL_PAGES: ManagedPage[] = [
   { id: "teams",            label: "Our Team",           slug: "/teams",  icon: Users,        navMode: "sub", parentId: "about-us" },
   { id: "careers",          label: "Careers",            slug: "/careers", icon: Briefcase,   navMode: "sub", parentId: "about-us" },
   { id: "services",         label: "Services",           slug: "/services", icon: Briefcase,  navMode: "top" },
-  { id: "book-appointment", label: "Book Appointment",   slug: "/book",   icon: CalendarCheck, navMode: "top" },
-  { id: "blog",             label: "Blog",               slug: "/blog",   icon: FileText,     navMode: "top" },
-  { id: "faqs",             label: "FAQs",               slug: "/faqs",   icon: HelpCircle,   navMode: "top" },
+  { id: "book-appointment", label: "Book Appointment",   slug: "/book",   icon: CalendarCheck, navMode: "hidden" },
+  { id: "blog",             label: "Blog",               slug: "/blog",   icon: FileText,     navMode: "hidden" },
+  { id: "faqs",             label: "FAQs",               slug: "/faqs",   icon: HelpCircle,   navMode: "hidden" },
   { id: "payment-insurance", label: "Payment & Insurance", slug: "/payment", icon: CreditCard, navMode: "hidden" },
-  { id: "forums",           label: "Forums",             slug: "/forums", icon: MessageSquare, navMode: "top" },
+  { id: "forums",           label: "Forums",             slug: "/forums", icon: MessageSquare, navMode: "hidden" },
 ];
 
 // ─── Tree builder ─────────────────────────────────────────────────────────────
@@ -62,6 +62,16 @@ interface PagesTabProps {
 
 function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
   const [pages, setPages] = useState<ManagedPage[]>(INITIAL_PAGES);
+  const { updateNavLinks, updateNavConfig, clinic: clinicCtx } = useClinic();
+
+  // Sync top-level pages → nav links in context whenever pages change
+  useEffect(() => {
+    updateNavLinks(
+      pages
+        .filter(p => p.navMode === "top")
+        .map(p => ({ id: p.id, label: p.label, href: p.slug || `#${p.id}`, openInNewTab: false }))
+    );
+  }, [pages, updateNavLinks]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -94,23 +104,33 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
     if (selectedPage === id) onPageSelect("home");
   }, [selectedPage, onPageSelect]);
 
-  /** Sync pages[] navMode/parentId from the NavItem tree returned by NavigationManager. */
+  /** Sync pages[] navMode/parentId from the NavItem tree, preserving nav order. */
   const handleNavSave = useCallback((navItems: NavItem[]) => {
+    // Collect ordered IDs from the nav tree (depth-first)
+    const orderedIds: string[] = [];
     const updates = new Map<string, { navMode: NavMode; parentId?: string }>();
+
     function process(items: NavItem[], parentId?: string) {
       items.forEach(item => {
+        orderedIds.push(item.id);
         updates.set(item.id, { navMode: parentId ? "sub" : "top", parentId });
         process(item.children, item.id);
       });
     }
     process(navItems);
 
-    setPages(prev => prev.map(p => {
-      const u = updates.get(p.id);
-      if (u) return { ...p, ...u };
-      // Page not in nav tree → mark hidden (but keep it in the site)
-      return { ...p, navMode: "hidden", parentId: undefined };
-    }));
+    setPages(prev => {
+      // Re-order: nav items first (in nav order), then pages not in nav tree
+      const hiddenPages = prev.filter(p => !orderedIds.includes(p.id));
+      const orderedPages = orderedIds
+        .map(id => prev.find(p => p.id === id))
+        .filter(Boolean) as ManagedPage[];
+      return [...orderedPages, ...hiddenPages].map(p => {
+        const u = updates.get(p.id);
+        if (u) return { ...p, ...u };
+        return { ...p, navMode: "hidden" as NavMode, parentId: undefined };
+      });
+    });
   }, []);
 
   // ── Menu helpers ────────────────────────────────────────────────────────────
@@ -172,7 +192,7 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
             <span
               className={[
                 "flex-1 truncate",
-                depth === 0 ? "text-sm font-medium" : "text-xs font-medium",
+                depth === 0 ? "text-[13px] font-medium" : "text-[11px] font-medium",
                 isSelected ? "text-[#003459]" : "text-gray-700",
               ].join(" ")}
             >
@@ -297,6 +317,8 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
           initialLinked={pagesToNavTree(pages)}
           onSave={handleNavSave}
           onClose={() => setNavManagerOpen(false)}
+          navConfig={clinicCtx.navConfig}
+          onNavConfigChange={updateNavConfig}
         />
       )}
     </div>

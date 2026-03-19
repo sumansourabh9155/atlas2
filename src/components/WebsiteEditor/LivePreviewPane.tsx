@@ -4,6 +4,7 @@ import type { ActiveModeResult } from "../../types/smartModes";
 import { HeroLivePreview } from "./HeroLivePreview";
 import { TeamsLivePreview } from "./TeamsLivePreview";
 import { ClinicHomepageTemplate } from "./ClinicHomepageTemplate";
+import { PagePreviewRouter } from "./PagePreviews";
 import { AICopilotBar } from "./AICopilotBar";
 import type {
   ViewportMode, HeroEditorState, ServicesEditorState,
@@ -306,10 +307,12 @@ export function LivePreviewPane({
       onTemplateDrop={onTemplateDrop}
     />
   ) : (
-    <>
-      <HeroLivePreview  state={heroState}  clinic={clinic} compact={compact} theme={theme} />
-      <TeamsLivePreview state={teamsState} clinic={clinic} compact={compact} theme={theme} />
-    </>
+    <PagePreviewRouter
+      selectedPage={selectedPage}
+      clinic={clinic}
+      compact={compact}
+      theme={theme}
+    />
   );
 
   return (

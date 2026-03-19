@@ -7,11 +7,13 @@
 import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
-  X, Search, Plus, Eye, EyeOff, Trash2,
+  X, Search, Eye, EyeOff, Trash2,
   ChevronRight, ChevronDown, GripVertical,
-  ArrowRight, FileText, ExternalLink,
+  ArrowRight, FileText, ExternalLink, Settings2, LayoutList,
 } from "lucide-react";
 import type { ManagedPage } from "./PageSettingsMenu";
+import type { NavConfigCtx } from "../../context/ClinicContext";
+import { NavigationEditor } from "./editors/NavigationEditor";
 
 // ─── Nav item tree type ───────────────────────────────────────────────────────
 
@@ -109,11 +111,16 @@ interface NavigationManagerProps {
   initialLinked: NavItem[];
   onSave: (linked: NavItem[]) => void;
   onClose: () => void;
+  /** Nav bar style settings — live-edited in the Settings tab */
+  navConfig: NavConfigCtx;
+  onNavConfigChange: (patch: Partial<NavConfigCtx>) => void;
 }
 
 export function NavigationManager({
   sitePages, initialLinked, onSave, onClose,
+  navConfig, onNavConfigChange,
 }: NavigationManagerProps) {
+  const [activeTab, setActiveTab]       = useState<"pages" | "settings">("pages");
   const [linked, setLinked]             = useState<NavItem[]>(initialLinked);
   const [expanded, setExpanded]         = useState<Set<string>>(() => {
     // Default-expand parents that have children
@@ -346,9 +353,11 @@ export function NavigationManager({
         {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-[15px] font-semibold text-gray-900">Page Navigation Updates</h2>
+            <h2 className="text-[15px] font-semibold text-gray-900">Navigation</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">
-              Drag pages into the linked panel, then reorder by dragging the grip handle.
+              {activeTab === "pages"
+                ? "Drag pages into the linked panel, then reorder by dragging the grip handle."
+                : "Customize the appearance and behaviour of the navigation bar."}
             </p>
           </div>
           <button
@@ -360,7 +369,39 @@ export function NavigationManager({
           </button>
         </div>
 
-        {/* ── Two-panel body ───────────────────────────────────────────── */}
+        {/* ── Tab bar ──────────────────────────────────────────────────── */}
+        <div className="flex items-stretch border-b border-gray-100 bg-gray-50/60 shrink-0 h-10">
+          {([
+            { id: "pages",    label: "Pages",    Icon: LayoutList  },
+            { id: "settings", label: "Settings", Icon: Settings2   },
+          ] as const).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              className={[
+                "flex items-center gap-1.5 px-5 text-xs font-medium border-b-2 transition-colors",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500",
+                activeTab === id
+                  ? "border-blue-600 text-blue-700 bg-white"
+                  : "border-transparent text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Settings tab ─────────────────────────────────────────────── */}
+        {activeTab === "settings" && (
+          <div className="flex-1 overflow-y-auto">
+            <NavigationEditor config={navConfig} onChange={onNavConfigChange} />
+          </div>
+        )}
+
+        {/* ── Pages tab body ───────────────────────────────────────────── */}
+        {activeTab === "pages" && (
         <div className="flex flex-1 min-h-0">
 
           {/* Left: Available Pages */}
@@ -508,23 +549,36 @@ export function NavigationManager({
             </div>
           </div>
         </div>
+        )} {/* end Pages tab body */}
 
         {/* ── Footer ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-100 bg-gray-50/60 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:border-gray-300 rounded-lg transition-colors"
-          >
-            Discard Changes
-          </button>
-          <button
-            type="button"
-            onClick={() => { onSave(linked); onClose(); }}
-            className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-          >
-            Save & Update Navigation
-          </button>
+          {activeTab === "pages" ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:border-gray-300 rounded-lg transition-colors"
+              >
+                Discard Changes
+              </button>
+              <button
+                type="button"
+                onClick={() => { onSave(linked); onClose(); }}
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+              >
+                Save & Update Navigation
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+            >
+              Done
+            </button>
+          )}
         </div>
       </div>
     </>,

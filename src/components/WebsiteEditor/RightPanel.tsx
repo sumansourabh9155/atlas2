@@ -10,6 +10,7 @@ import { HeroEditor } from "./editors/HeroEditor";
 import { ServicesEditor } from "./editors/ServicesEditor";
 import { TeamsEditor } from "./editors/TeamsEditor";
 import { AITextField, AITextarea } from "./ai/AITextField";
+import { generateVetClinicSchema } from "./ai/schemaGenerator";
 import type {
   OpenBlock, SectionId,
   HeroEditorState, ServicesEditorState, TeamsEditorState,
@@ -575,6 +576,8 @@ function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState 
   const [generated,   setGenerated]       = useState(false);
   const [keywords,    setKeywords]        = useState<KeywordHit[]>([]);
   const [showChecks,  setShowChecks]      = useState(false);
+  const [schemaJson,  setSchemaJson]      = useState<string | null>(null);
+  const [schemaCopied, setSchemaCopied]   = useState(false);
 
   const displayTitle = state.metaTitle      || `${clinicName} — Specialty & Emergency Vet Care`;
   const displayDesc  = state.metaDescription || "Board-certified specialists in internal medicine, surgery, and critical care.";
@@ -927,12 +930,90 @@ function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState 
         </div>
       )}
 
-      {/* ── Structured data ── */}
-      <div className="p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
-        <p className="text-xs font-semibold text-[#003459] mb-1">Structured Data — Auto-generated</p>
-        <p className="text-[10px] text-gray-500 leading-relaxed">
-          <strong className="font-semibold">LocalBusiness</strong>, <strong className="font-semibold">VetOrVeterinaryCare</strong>, and <strong className="font-semibold">OpeningHoursSpecification</strong> JSON-LD schemas are auto-generated from your Hospital Details and injected into the page <code>&lt;head&gt;</code> at publish time.
-        </p>
+      {/* ── Structured Data / JSON-LD ── */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 bg-gray-50">
+          <Link2 className="w-3.5 h-3.5 text-teal-600 shrink-0" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-800">Structured Data / JSON-LD</p>
+            <p className="text-[10px] text-gray-400">Auto-generated from your clinic details</p>
+          </div>
+        </div>
+
+        <div className="p-3.5 flex flex-col gap-3">
+          {/* Badge pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                "VeterinaryClinic",
+                "OpeningHours",
+                `Services · ${clinic.services.filter((s) => s.isVisible).length}`,
+                `Team · ${clinic.veterinarians.filter((v) => v.isVisible).length}`,
+              ] as const
+            ).map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 text-teal-700 border border-teal-200"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+
+          {/* Generate button */}
+          <button
+            type="button"
+            onClick={() => {
+              const schema = generateVetClinicSchema(clinic);
+              setSchemaJson(JSON.stringify(schema, null, 2));
+            }}
+            className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#003459] hover:bg-[#002845] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]"
+          >
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+            Generate Schema
+          </button>
+
+          {/* Code block */}
+          {schemaJson && (
+            <>
+              <div className="rounded-lg overflow-hidden border border-gray-700">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-gray-800">
+                  <span className="text-[10px] font-mono text-gray-400">application/ld+json</span>
+                  <span className="text-[10px] text-gray-500">{schemaJson.split("\n").length} lines</span>
+                </div>
+                <pre className="bg-gray-900 text-green-300 font-mono text-[10px] leading-relaxed p-3 max-h-56 overflow-y-auto whitespace-pre-wrap break-all">
+                  {'<script type="application/ld+json">\n'}
+                  {schemaJson}
+                  {'\n</script>'}
+                </pre>
+              </div>
+
+              {/* Copy button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const script = `<script type="application/ld+json">\n${schemaJson}\n</script>`;
+                  navigator.clipboard.writeText(script).then(() => {
+                    setSchemaCopied(true);
+                    setTimeout(() => setSchemaCopied(false), 2000);
+                  });
+                }}
+                className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+              >
+                {schemaCopied ? (
+                  <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> ✓ Copied!</>
+                ) : (
+                  <><Link2 className="w-3.5 h-3.5" /> Copy JSON-LD</>
+                )}
+              </button>
+
+              <p className="text-[10px] text-gray-400 leading-relaxed">
+                ℹ Paste this <code className="font-mono bg-gray-100 px-1 rounded">&lt;script&gt;</code> tag into your site&apos;s <code className="font-mono bg-gray-100 px-1 rounded">&lt;head&gt;</code> or hand it to your developer.
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
     </div>

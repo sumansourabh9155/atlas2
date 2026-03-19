@@ -5,7 +5,7 @@ import {
   Download, Mail, Pill, Facebook, ArrowRight,
   Home, Building2,
 } from "lucide-react";
-import type { ClinicWebsite } from "../../types/clinic";
+import type { ClinicWebsite, NavigationBlock } from "../../types/clinic";
 import { INITIAL_SECTION_ORDER } from "./WebsiteEditorPage";
 import type {
   HeroEditorState, TeamsEditorState,
@@ -43,7 +43,7 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hexToRgba(hex: string, alpha: number) {
+export function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -53,13 +53,13 @@ function hexToRgba(hex: string, alpha: number) {
 // ─── Template color context ───────────────────────────────────────────────────
 // Provides primaryColor + secondaryColor to all sub-components without prop-drilling.
 
-interface TemplateColors { primary: string; secondary: string }
-const TemplateColorsCtx = createContext<TemplateColors>({ primary: "#1B2B4B", secondary: "#C1121F" });
-const useColors = () => useContext(TemplateColorsCtx);
+export interface TemplateColors { primary: string; secondary: string }
+export const TemplateColorsCtx = createContext<TemplateColors>({ primary: "#1B2B4B", secondary: "#C1121F" });
+export const useColors = () => useContext(TemplateColorsCtx);
 
 // ─── TopBanner ────────────────────────────────────────────────────────────────
 
-function TopBanner() {
+export function TopBanner() {
   const { primary, secondary } = useColors();
   return (
     <div
@@ -85,87 +85,104 @@ function TopBanner() {
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
-function Navbar({
-  clinic, isDark,
-}: { clinic: ClinicWebsite; isDark: boolean }) {
+export function Navbar({
+  clinic, isDark, navBlock,
+}: { clinic: ClinicWebsite; isDark: boolean; navBlock: NavigationBlock | undefined }) {
   const { primary, secondary } = useColors();
   const name = clinic.general.name;
   const firstWord = name.split(" ")[0].toUpperCase();
 
-  const NAV_LINKS = [
-    { label: "Locations", dropdown: true  },
-    { label: "Services",  dropdown: true  },
-    { label: "About Us",  dropdown: true  },
-    { label: "Resources", dropdown: true  },
-  ];
+  // Derive colours from navBlock.colorScheme — fall back to isDark for theme compat
+  const scheme   = navBlock?.colorScheme ?? (isDark ? "dark" : "light");
+  const isNavDark  = scheme === "dark" || scheme === "brand";
+  const navBg =
+    scheme === "brand" ? primary :
+    scheme === "dark"  ? "#0f172a" : "#ffffff";
+  const navBorder =
+    scheme === "dark"  ? "rgba(255,255,255,0.08)" :
+    scheme === "brand" ? "rgba(255,255,255,0.15)" : "#e5e7eb";
+  const linkColor = isNavDark ? "#cbd5e1" : "#374151";
+  const subBg     = scheme === "dark" ? "#1e293b" : scheme === "brand" ? "#002d4a" : "#ffffff";
+
+  // Use live links from context (fallback to a sensible default)
+  const navLinks = navBlock?.links ?? [];
+  const ctaLabel = navBlock?.ctaButton?.label ?? "Book Appointment";
+  const showCta  = !!(navBlock?.ctaButton?.href ?? true);
 
   return (
-    <header>
+    <header className={navBlock?.isSticky ? "sticky top-0 z-50" : ""}>
       {/* Main nav row */}
       <div
         className="px-5 h-14 flex items-center justify-between gap-4"
-        style={{
-          background: isDark ? "#0f172a" : "#ffffff",
-          borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb"}`,
-        }}
+        style={{ background: navBg, borderBottom: `1px solid ${navBorder}` }}
       >
-        {/* Logo */}
+        {/* Logo / Brand */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div
-            className="w-7 h-7 flex items-center justify-center rounded-sm shrink-0"
-            style={{ background: secondary }}
-            aria-hidden="true"
-          >
-            <span className="text-white font-black text-xs">{firstWord[0] ?? "V"}</span>
-          </div>
-          <div className="leading-none">
-            <p className="text-[11px] font-black tracking-tight" style={{ color: isDark ? "#f1f5f9" : primary }}>
-              {firstWord}
-            </p>
-            <p className="text-[7px] font-semibold tracking-widest uppercase" style={{ color: isDark ? "#475569" : "#9ca3af" }}>
-              Veterinary Hospital
-            </p>
-          </div>
+          {clinic.general.logoUrl ? (
+            <img src={clinic.general.logoUrl} alt={name} className="h-8 w-auto object-contain" />
+          ) : (
+            <div
+              className="w-7 h-7 flex items-center justify-center rounded-sm shrink-0"
+              style={{ background: secondary }}
+              aria-hidden="true"
+            >
+              <span className="text-white font-black text-xs">{firstWord[0] ?? "V"}</span>
+            </div>
+          )}
+          {(navBlock?.showClinicName !== false) && (
+            <div className="leading-none">
+              <p className="text-[11px] font-black tracking-tight" style={{ color: isNavDark ? "#f1f5f9" : primary }}>
+                {firstWord}
+              </p>
+              <p className="text-[7px] font-semibold tracking-widest uppercase" style={{ color: isNavDark ? "#475569" : "#9ca3af" }}>
+                Veterinary Hospital
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-2 flex-1 justify-center">
-          {NAV_LINKS.map(({ label, dropdown }) => (
+        {/* Nav links — driven by context */}
+        <nav className="hidden md:flex items-center gap-5 flex-1 justify-center" aria-label="Main navigation">
+          {navLinks.map((link) => (
             <a
-              key={label}
-              href="#"
-              className="flex items-center gap-0.5 text-xs font-medium whitespace-nowrap"
-              style={{ color: label === "Home" ? secondary : isDark ? "#cbd5e1" : "#374151" }}
+              key={link.label}
+              href={link.href ?? "#"}
+              target={link.openInNewTab ? "_blank" : undefined}
+              rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+              className="text-xs font-medium whitespace-nowrap hover:opacity-70 transition-opacity"
+              style={{ color: linkColor }}
             >
-              {label}
-              {dropdown && <ChevronDown className="w-3 h-3 opacity-50" aria-hidden="true" />}
+              {link.label}
             </a>
           ))}
-          <a
-            href="#"
-            className="flex items-center gap-0.5 text-xs font-medium"
-            style={{ color: isDark ? "#cbd5e1" : "#374151" }}
-          >
-            <Globe className="w-3 h-3" aria-hidden="true" />
-            <span className="ml-0.5">En</span>
-            <ChevronDown className="w-3 h-3 opacity-50" aria-hidden="true" />
-          </a>
+          {navLinks.length === 0 && (
+            /* Fallback placeholder when no pages are in nav */
+            ["Services", "About Us", "Contact"].map(l => (
+              <a key={l} href="#" className="text-xs font-medium whitespace-nowrap opacity-50" style={{ color: linkColor }}>
+                {l}
+              </a>
+            ))
+          )}
         </nav>
 
-        {/* CTA Buttons */}
+        {/* CTA */}
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            className="px-3.5 py-1.5 rounded-md text-xs font-bold border-2 transition-colors"
-            style={{ borderColor: secondary, color: secondary, background: "transparent" }}
-          >
-            Emergency
-          </button>
-          <button
-            className="px-3.5 py-1.5 rounded-md text-xs font-bold text-white"
-            style={{ background: primary }}
-          >
-            Book Appointment
-          </button>
+          {clinic.contact?.emergencyPhone && (
+            <button
+              className="px-3.5 py-1.5 rounded-md text-xs font-bold border-2 transition-colors"
+              style={{ borderColor: secondary, color: isNavDark ? "#fff" : secondary, background: "transparent" }}
+            >
+              Emergency
+            </button>
+          )}
+          {showCta && (
+            <button
+              className="px-3.5 py-1.5 rounded-md text-xs font-bold text-white"
+              style={{ background: secondary }}
+            >
+              {ctaLabel}
+            </button>
+          )}
         </div>
       </div>
 
@@ -173,19 +190,19 @@ function Navbar({
       <div
         className="h-8 flex items-center justify-center gap-2 text-xs border-b"
         style={{
-          background: isDark ? "#1e293b" : "#ffffff",
-          borderColor: isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb",
-          color: isDark ? "#94a3b8" : "#374151",
+          background: subBg,
+          borderColor: isNavDark ? "rgba(255,255,255,0.06)" : "#e5e7eb",
+          color: isNavDark ? "#94a3b8" : "#374151",
         }}
       >
-        <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: isDark ? "#64748b" : primary }} aria-hidden="true" />
+        <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: isNavDark ? "#64748b" : primary }} aria-hidden="true" />
         <span>
           Next available:{" "}
-          <strong style={{ color: isDark ? "#e2e8f0" : primary }}>Today, 3:00 PM</strong>
+          <strong style={{ color: isNavDark ? "#e2e8f0" : primary }}>Today, 3:00 PM</strong>
         </span>
         <button
           className="w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-bold shrink-0"
-          style={{ borderColor: isDark ? "#475569" : "#d1d5db", color: isDark ? "#64748b" : "#9ca3af" }}
+          style={{ borderColor: isNavDark ? "#475569" : "#d1d5db", color: isNavDark ? "#64748b" : "#9ca3af" }}
           aria-label="More info"
         >
           i
@@ -1363,7 +1380,7 @@ function NewsletterSection({
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
-function Footer({
+export function Footer({
   clinic, isDark,
 }: { clinic: ClinicWebsite; isDark: boolean }) {
   const { primary, secondary } = useColors();
@@ -1611,6 +1628,11 @@ export function ClinicHomepageTemplate({
   const secondaryColor = clinic.general.secondaryColor ?? "#F59E0B";
   const isDark = theme === "2";
 
+  // Extract the live nav block injected by WebsiteEditorPage
+  const navBlock = clinic.blocks?.find(
+    (b): b is NavigationBlock => b.type === "navigation"
+  );
+
   // ── Section renderer map ──────────────────────────────────────────────────
   // Each key maps to its JSX. Keyed Fragment lets React preserve component
   // state (e.g. FAQ accordion open state) when sections are reordered.
@@ -1749,7 +1771,7 @@ export function ClinicHomepageTemplate({
     <TemplateColorsCtx.Provider value={{ primary: primaryColor, secondary: secondaryColor }}>
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", color: isDark ? "#e2e8f0" : "#1a1a1a" }}>
       <TopBanner />
-      <Navbar clinic={clinic} isDark={isDark} />
+      <Navbar clinic={clinic} isDark={isDark} navBlock={navBlock} />
 
       {/* Canvas drag hint — sticky banner when a template is being dragged */}
       {isDragging && (
