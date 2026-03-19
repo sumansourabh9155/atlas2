@@ -399,27 +399,23 @@ function SectionTemplatesTab({ onTemplateDragStart, onTemplateDragEnd, onAddSect
                 <ChevronDown
                   className={[
                     "w-3.5 h-3.5 transition-transform duration-200",
-                    isAccent ? "text-indigo-400" : "text-gray-400",
+                    isAccent ? "text-gray-600" : "text-gray-400",
                     isOpen ? "" : "-rotate-90",
                   ].join(" ")}
                 />
                 <span className={[
                   "text-xs font-bold transition-colors",
                   isAccent
-                    ? "text-indigo-600 group-hover:text-indigo-700"
+                    ? "text-gray-600 group-hover:ttext-gray-500"
                     : "text-gray-700 group-hover:text-gray-900",
                 ].join(" ")}>
                   {meta.label}
                 </span>
-                {isAccent ? (
-                  <span className="ml-1 text-[9px] font-bold text-indigo-400 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5 leading-none">
-                    DRAG TO ADD
-                  </span>
-                ) : (
+                
                   <span className="ml-auto text-[9px] font-semibold text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 leading-none">
                     {defs.length}
                   </span>
-                )}
+               
               </button>
 
               {isOpen && (
@@ -490,9 +486,9 @@ function SectionTemplatesTab({ onTemplateDragStart, onTemplateDragEnd, onAddSect
                         {def.thumb}
                       </div>
                       <span className={[
-                        "text-[10px] font-semibold transition-colors",
+                        "text-[10px] font-medium transition-colors",
                         isAccent
-                          ? "text-indigo-500 group-hover:text-indigo-700"
+                          ? "ttext-gray-500 group-hover:ttext-gray-500"
                           : "text-gray-500 group-hover:text-[#003459]",
                       ].join(" ")}>
                         {def.label}
