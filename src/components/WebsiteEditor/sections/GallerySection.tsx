@@ -5,8 +5,8 @@ const NAVY = "#1B2B4B";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -145,7 +145,7 @@ export function GalleryEditor({
           value={state.subtext}
           onChange={(e) => onChange({ subtext: e.target.value })}
           rows={2}
-          className="w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459] transition-colors resize-none"
+          className="w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition-colors resize-none"
           placeholder="Brief description…"
         />
       </div>
@@ -172,7 +172,7 @@ export function GalleryEditor({
                 type="text"
                 value={photo.url}
                 onChange={(e) => updatePhoto(i, "url", e.target.value)}
-                className="h-7 px-2.5 text-xs text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459]"
+                className="h-7 px-2.5 text-xs text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600"
                 placeholder={`Photo ${i + 1} URL`}
               />
             </div>

@@ -190,7 +190,7 @@ export function ConsistencyPanel({ onApplyFix, onClose }: Props) {
             {allFixed ? (
               <button
                 onClick={onClose}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors"
               >
                 Done ✓
               </button>

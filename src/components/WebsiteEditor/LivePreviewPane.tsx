@@ -339,7 +339,7 @@ export function LivePreviewPane({
                 aria-pressed={theme === t}
                 className={[
                   "px-3.5 py-1.5 rounded-[10px] text-xs font-medium transition-all",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                   theme === t
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-600",
@@ -421,7 +421,7 @@ export function LivePreviewPane({
                 title={label}
                 className={[
                   "p-1.5 rounded-[10px] transition-all",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                   viewport === mode
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-600",

@@ -7,13 +7,13 @@ import { useAIEditorContext } from "./AIEditorContext";
 
 const BASE_INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const BASE_TEXTAREA =
   "w-full px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors resize-none py-2 leading-relaxed";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors resize-none py-2 leading-relaxed";
 
 // ─── Loading shimmer (overlaid on the field while AI is running) ──────────────
 

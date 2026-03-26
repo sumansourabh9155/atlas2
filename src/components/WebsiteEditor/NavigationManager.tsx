@@ -381,9 +381,9 @@ export function NavigationManager({
               onClick={() => setActiveTab(id)}
               className={[
                 "flex items-center gap-1.5 px-5 text-xs font-medium border-b-2 transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500",
                 activeTab === id
-                  ? "border-blue-600 text-blue-700 bg-white"
+                  ? "border-teal-600 text-teal-700 bg-white"
                   : "border-transparent text-gray-500 hover:text-gray-700",
               ].join(" ")}
             >
@@ -448,7 +448,7 @@ export function NavigationManager({
                       type="button"
                       onClick={() => addPage(page)}
                       title="Add to navigation"
-                      className="p-1 rounded text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all opacity-0 group-hover:opacity-100"
+                      className="p-1 rounded text-teal-500 hover:text-teal-700 hover:bg-teal-50 transition-all opacity-0 group-hover:opacity-100"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -466,7 +466,7 @@ export function NavigationManager({
               <button
                 type="button"
                 onClick={() => setShowCustom(p => !p)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 bg-blue-50/50 hover:bg-blue-50 rounded-md px-2.5 py-1 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-800 border border-teal-200 hover:border-teal-400 bg-teal-50/50 hover:bg-teal-50 rounded-md px-2.5 py-1 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 Add New Menu
@@ -475,8 +475,8 @@ export function NavigationManager({
 
             {/* Custom link form */}
             {showCustom && (
-              <div className="mx-4 mb-2 p-3 bg-blue-50/60 border border-blue-100 rounded-xl shrink-0">
-                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-2">
+              <div className="mx-4 mb-2 p-3 bg-teal-50/60 border border-teal-100 rounded-xl shrink-0">
+                <p className="text-[10px] font-bold text-teal-500 uppercase tracking-wider mb-2">
                   Custom Link
                 </p>
                 <div className="flex gap-2 mb-2">
@@ -501,7 +501,7 @@ export function NavigationManager({
                     type="button"
                     onClick={addCustomLink}
                     disabled={!customLabel.trim()}
-                    className="text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 rounded-md px-3 py-1 transition-colors"
+                    className="text-[11px] font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-40 rounded-md px-3 py-1 transition-colors"
                   >
                     Add
                   </button>
@@ -565,7 +565,7 @@ export function NavigationManager({
               <button
                 type="button"
                 onClick={() => { onSave(linked); onClose(); }}
-                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm transition-colors"
               >
                 Save & Update Navigation
               </button>
@@ -574,7 +574,7 @@ export function NavigationManager({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm transition-colors"
             >
               Done
             </button>

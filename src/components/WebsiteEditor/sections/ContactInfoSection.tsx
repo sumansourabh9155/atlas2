@@ -6,8 +6,8 @@ const AMBER = "#F59E0B";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -154,7 +154,7 @@ export function ContactInfoEditor({
           value={state.address}
           onChange={(e) => onChange({ address: e.target.value })}
           rows={2}
-          className="w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459] transition-colors resize-none"
+          className="w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition-colors resize-none"
           placeholder="123 Main St&#10;Austin, TX 78701"
         />
       </div>

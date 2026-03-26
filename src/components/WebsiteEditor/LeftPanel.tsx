@@ -178,14 +178,14 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
             onClick={() => onPageSelect(node.id)}
             className={[
               "flex-1 flex items-center gap-2 py-1.5 pl-3 pr-1 text-left min-w-0",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] rounded-md",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded-md",
             ].join(" ")}
           >
             <Icon
               className={[
                 "shrink-0",
                 depth === 0 ? "w-4 h-4" : "w-3.5 h-3.5 text-gray-400",
-                isSelected ? "text-[#003459]" : "text-[#003459]/60",
+                isSelected ? "text-teal-600" : "text-teal-600/60",
               ].join(" ")}
             />
 
@@ -193,7 +193,7 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
               className={[
                 "flex-1 truncate",
                 depth === 0 ? "text-[13px] font-medium" : "text-[11px] font-medium",
-                isSelected ? "text-[#003459]" : "text-gray-700",
+                isSelected ? "text-teal-600" : "text-gray-700",
               ].join(" ")}
             >
               {node.label}
@@ -206,7 +206,7 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
 
             {/* Children badge */}
             {node.children.length > 0 && (
-              <span className="text-[9px] font-bold text-[#003459] bg-blue-50 border border-blue-100 px-1 py-0.5 rounded-full leading-none shrink-0">
+              <span className="text-[9px] font-bold text-teal-600 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded-full leading-none shrink-0">
                 {node.children.length}
               </span>
             )}
@@ -277,7 +277,7 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
             type="button"
             onClick={() => setNavManagerOpen(true)}
             title="Manage navigation structure"
-            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 bg-blue-50/50 rounded-md px-2 py-1 transition-colors focus:outline-none"
+            className="inline-flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 border border-teal-200 hover:border-teal-400 bg-teal-50/50 rounded-md px-2 py-1 transition-colors focus:outline-none"
           >
             <Navigation2 className="w-3 h-3" />
             Nav
@@ -290,7 +290,7 @@ function PagesTab({ selectedPage, onPageSelect }: PagesTabProps) {
         <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Navigation Hierarchy</span>
         <div className="flex items-center gap-2 ml-auto">
           <span className="flex items-center gap-1 text-[9px] text-gray-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#003459]/60 inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-600/60 inline-block" />
             {visibleCount} visible
           </span>
         </div>
@@ -378,7 +378,7 @@ function SectionTemplatesTab({ onTemplateDragStart, onTemplateDragEnd, onAddSect
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search for Sections"
-            className="w-full h-8 pl-8 pr-3 text-sm bg-gray-50 border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459] transition-colors"
+            className="w-full h-8 pl-8 pr-3 text-sm bg-gray-50 border border-gray-200 rounded-md placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition-colors"
           />
         </div>
       </div>
@@ -489,7 +489,7 @@ function SectionTemplatesTab({ onTemplateDragStart, onTemplateDragEnd, onAddSect
                         "text-[10px] font-medium transition-colors",
                         isAccent
                           ? "ttext-gray-500 group-hover:ttext-gray-500"
-                          : "text-gray-500 group-hover:text-[#003459]",
+                          : "text-gray-500 group-hover:text-teal-600",
                       ].join(" ")}>
                         {def.label}
                       </span>
@@ -570,9 +570,9 @@ export function LeftPanel({
             onClick={() => setTab(t)}
             className={[
               "flex-1 flex items-center justify-center text-xs font-medium border-b-2 transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#003459]",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600",
               tab === t
-                ? "border-[#003459] text-[#003459]"
+                ? "border-teal-600 text-teal-600"
                 : "border-transparent text-gray-500 hover:text-gray-700",
             ].join(" ")}
           >

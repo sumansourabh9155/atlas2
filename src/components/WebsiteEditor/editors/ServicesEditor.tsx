@@ -5,8 +5,8 @@ import { AITextField, AITextarea } from "../ai/AITextField";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -69,9 +69,9 @@ export function ServicesEditor({ state, onChange, clinic }: Props) {
                 aria-pressed={active}
                 className={[
                   "flex flex-col items-center gap-1 py-2.5 rounded-lg border text-xs font-medium transition-all",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                   active
-                    ? "border-[#003459] bg-blue-50 text-[#003459]"
+                    ? "border-teal-600 bg-blue-50 text-teal-600"
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300",
                 ].join(" ")}
               >
@@ -96,9 +96,9 @@ export function ServicesEditor({ state, onChange, clinic }: Props) {
                 aria-pressed={state.gridColumns === n}
                 className={[
                   "flex-1 h-8 rounded-lg border text-sm font-semibold transition-all",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                   state.gridColumns === n
-                    ? "border-[#003459] bg-blue-50 text-[#003459]"
+                    ? "border-teal-600 bg-blue-50 text-teal-600"
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300",
                 ].join(" ")}
               >
@@ -119,7 +119,7 @@ export function ServicesEditor({ state, onChange, clinic }: Props) {
           aria-label="Show pricing"
           onClick={() => onChange({ showPricing: !state.showPricing })}
           className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent
-            transition-colors ${state.showPricing ? "bg-[#003459]" : "bg-gray-200"}`}
+            transition-colors ${state.showPricing ? "bg-teal-600" : "bg-gray-200"}`}
         >
           <span
             className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform
@@ -139,7 +139,7 @@ export function ServicesEditor({ state, onChange, clinic }: Props) {
             className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-md px-2.5 py-1.5 border border-gray-100"
           >
             <span
-              className="w-1.5 h-1.5 rounded-full bg-[#003459] shrink-0"
+              className="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"
               aria-hidden="true"
             />
             {s.name}

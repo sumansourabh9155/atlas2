@@ -97,7 +97,7 @@ function SaveButton({ state, onClick }: { state: SaveState; onClick: () => void 
   const cls =
     state === "saved"   ? "bg-green-600 border-green-600"
     : state === "error" ? "bg-red-600   border-red-600"
-    : "bg-[#003459] border-[#003459] hover:bg-[#002845]";
+    : "bg-teal-600 border-teal-600 hover:bg-teal-700";
 
   return (
     <button
@@ -106,7 +106,7 @@ function SaveButton({ state, onClick }: { state: SaveState; onClick: () => void 
       disabled={state === "saving"}
       className={[
         "inline-flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold text-white",
-        "border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+        "border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
         "focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed",
         cls,
       ].join(" ")}
@@ -372,9 +372,9 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
                     aria-current={isActive ? "page" : undefined}
                     className={[
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left",
-                      "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                      "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                       isActive
-                        ? "bg-blue-50/80 text-[#003459]"
+                        ? "bg-blue-50/80 text-teal-600"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                     ].join(" ")}
                   >
@@ -385,7 +385,7 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
                         isDone
                           ? "bg-green-100 text-green-600"
                           : isActive
-                          ? "bg-[#003459]/10 text-[#003459]"
+                          ? "bg-teal-600/10 text-teal-600"
                           : "bg-gray-100 text-gray-400",
                       ].join(" ")}
                       aria-hidden="true"
@@ -401,7 +401,7 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
                       <p
                         className={[
                           "text-xs font-semibold truncate",
-                          isActive ? "text-[#003459]" : "text-gray-800",
+                          isActive ? "text-teal-600" : "text-gray-800",
                         ].join(" ")}
                       >
                         {section.label}
@@ -414,7 +414,7 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
                     <span className="ml-auto shrink-0">
                       {isActive && (
                         <ChevronRight
-                          className="w-3.5 h-3.5 text-[#003459]"
+                          className="w-3.5 h-3.5 text-teal-600"
                           aria-hidden="true"
                         />
                       )}
@@ -437,16 +437,16 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
           <button
             type="button"
             onClick={() => setMigrationOpen(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-[#003459]/30 bg-[#003459]/[0.03] hover:bg-[#003459]/[0.07] hover:border-[#003459]/50 transition-all group"
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-teal-600/30 bg-teal-600/[0.03] hover:bg-teal-600/[0.07] hover:border-teal-600/50 transition-all group"
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#003459] to-[#0369A1] flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-600 to-[#0369A1] flex items-center justify-center shrink-0">
               <Zap className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-xs font-semibold text-[#003459] leading-tight">Import from existing site</p>
+              <p className="text-xs font-semibold text-teal-600 leading-tight">Import from existing site</p>
               <p className="text-[10px] text-gray-400 mt-0.5">Auto-fill from your live website</p>
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-[#003459]/50 group-hover:text-[#003459] transition-colors" />
+            <ChevronRight className="w-3.5 h-3.5 text-teal-600/50 group-hover:text-teal-600 transition-colors" />
           </button>
         </div>
 

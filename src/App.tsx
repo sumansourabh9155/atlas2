@@ -1,186 +1,181 @@
 /**
- * App.tsx — root with a mode toggle between Setup, Editor, and Preview.
+ * App.tsx — Root application shell.
+ *
+ * Architecture:
+ *  - React Router drives all navigation (URL = source of truth)
+ *  - Two layout branches:
+ *      AppLayout      — TopBar + LeftNav + <Outlet> for all normal pages
+ *      SiteCreation   — Distraction-free flow (no nav, no top bar)
+ *  - Context providers wrap everything at the root
+ *
+ * Adding a new page:
+ *  1. Add one entry to src/config/routes.config.ts
+ *  2. Add one <Route> inside <AppLayout> below
+ *  Done — nav, TopBar label, and CTA all update automatically.
  */
 
-import { useState } from "react";
-import { Settings2, Globe, PanelLeft, Check, Save, Loader2, ChevronRight } from "lucide-react";
-import { HospitalSetupPage } from "./components/HospitalSetup/HospitalSetupPage";
-import { WebsiteEditorPage } from "./components/WebsiteEditor/WebsiteEditorPage";
+import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useState }                      from "react";
+
+import { ClinicProvider, useClinic }     from "./context/ClinicContext";
+import { ApprovalProvider, useApproval } from "./context/ApprovalContext";
+
+import { TopBar }             from "./components/layout/TopBar";
+import { LeftNavigation }     from "./components/LeftNavigation";
+import { WebsiteEditorSubNav } from "./components/WebsiteEditor/WebsiteEditorSubNav";
+import type { InternalMode }  from "./components/WebsiteEditor/WebsiteEditorSubNav";
+
+// Pages
+import { DashboardPage }        from "./components/Dashboard/DashboardPage";
+import { SiteManagementPage }   from "./components/SiteManagement/SiteManagementPage";
+import { SiteListPage }         from "./components/SiteManagement/SiteListPage";
+import { GroupsPage }           from "./components/SiteManagement/GroupsPage";
+import { MultiLocationPage }    from "./components/SiteManagement/MultiLocationPage";
+import { DataCollectionPage }   from "./components/DataCollection/DataCollectionPage";
+import { MediaLibraryPage }     from "./components/MediaLibrary/MediaLibraryPage";
+import { BannerManagementPage } from "./components/BannerManagement/BannerManagementPage";
+import { ApprovalFlowPage }     from "./components/ApprovalFlow/ApprovalFlowPage";
+import { UserManagementPage }   from "./components/UserManagement/UserManagementPage";
+
+// Site creation 3-step flow
+import { HospitalSetupPage }    from "./components/HospitalSetup/HospitalSetupPage";
+import { WebsiteEditorPage }    from "./components/WebsiteEditor/WebsiteEditorPage";
 import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
-import { ClinicProvider, useClinic } from "./context/ClinicContext";
 
-type Mode = "setup" | "editor" | "domain";
+import { findRouteByPath }      from "./config/routes.config";
 
-const MODES: { id: Mode; label: string; Icon: React.ElementType }[] = [
-  { id: "setup",  label: "Clinic Details",       Icon: Settings2 },
-  { id: "editor", label: "Website Builder",      Icon: PanelLeft },
-  { id: "domain", label: "Domain & Publishing",  Icon: Globe     },
-];
+/* ══════════════════════════════════════════════════════════════════════════
+   AppLayout — Standard layout: TopBar + LeftNav + page content
+   Used by every normal page. Child route rendered via <Outlet />.
+══════════════════════════════════════════════════════════════════════════ */
 
-// ─── Inner app uses the clinic context ────────────────────────────────────────
+function AppLayout() {
+  const navigate   = useNavigate();
+  const { getPendingCount } = useApproval();
+  const approvalCount = getPendingCount();
 
-function AppInner() {
-  const [mode, setMode] = useState<Mode>("setup");
-  const { clinic, saveStatus, triggerSave, publish } = useClinic();
-
-  const saveBtnLabel =
-    saveStatus === "saving" ? "Saving…"
-    : saveStatus === "saved"  ? "Saved"
-    : "Save";
-
-  // Which step comes after the current one?
-  const NEXT_MODE: Partial<Record<Mode, Mode>> = { setup: "editor", editor: "domain" };
-  const NEXT_LABEL: Partial<Record<Mode, string>> = {
-    setup:  "Website Builder",
-    editor: "Domain & Publishing",
+  const handleCTAAction = (action: string) => {
+    switch (action) {
+      case "new-site":
+        // Navigate to the creation flow, carrying "from" so the back button works
+        navigate("/sites/new", { state: { from: window.location.pathname } });
+        break;
+      // Other actions are self-contained within their pages for now
+      default:
+        console.info("CTA action:", action);
+    }
   };
-  const nextMode  = NEXT_MODE[mode];
-  const nextLabel = NEXT_LABEL[mode];
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* ── Top bar ── */}
-      <div className="h-12 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-5 z-50">
-        {/* Left: Brand */}
-        <div className="flex items-center gap-2 w-44">
-          <div className="w-6 h-6 rounded bg-[#003459] flex items-center justify-center shrink-0" aria-hidden="true">
-            <span className="text-white text-[10px] font-bold">V</span>
-          </div>
-          <span className="text-sm font-semibold text-gray-900 tracking-tight">Vet CMS</span>
-          <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-            <span
-              className={`w-1 h-1 rounded-full ${clinic.status === "published" ? "bg-green-500" : "bg-amber-500"}`}
-              aria-hidden="true"
-            />
-            {clinic.status === "published" ? "Live" : "Draft"}
-          </span>
+      <TopBar onCTAClick={handleCTAAction} />
+
+      <div className="flex-1 overflow-hidden flex">
+        <LeftNavigation
+          approvalCount={approvalCount}
+          userRole="admin"
+          userName="Admin User"
+          userEmail="admin@nexio.com"
+          onLogout={() => console.log("Logout")}
+        />
+
+        {/* Page content — rendered by React Router */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <Outlet />
         </div>
-
-        {/* Centre: Step-progress tabs */}
-        <div role="tablist" aria-label="Switch mode" className="flex items-center">
-          {MODES.map(({ id, label }, i) => {
-            const activeIdx = MODES.findIndex(m => m.id === mode);
-            const active = mode === id;
-            const past   = i < activeIdx;
-            return (
-              <div key={id} className="flex items-center">
-                <button
-                  type="button"
-                  role="tab"
-                  onClick={() => setMode(id)}
-                  aria-selected={active}
-                  className="group flex items-center gap-2 px-2 py-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]"
-                >
-                  {/* Step bubble */}
-                  <div className={[
-                    "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold border-2 transition-all duration-200",
-                    active ? "bg-[#003459] border-[#003459] text-white shadow-sm"
-                           : past ? "bg-[#003459]/10 border-[#003459]/40 text-[#003459]"
-                                  : "bg-white border-gray-300 text-gray-400 group-hover:border-gray-400",
-                  ].join(" ")}>
-                    {past ? <Check className="w-3 h-3" /> : i + 1}
-                  </div>
-                  {/* Label */}
-                  <span className={[
-                    "text-sm font-medium transition-colors whitespace-nowrap",
-                    active ? "text-[#003459]"
-                           : past ? "text-gray-500"
-                                  : "text-gray-400 group-hover:text-gray-600",
-                  ].join(" ")}>
-                    {label}
-                  </span>
-                </button>
-                {/* Connector */}
-                {i < MODES.length - 1 && (
-                  <div className="w-10 h-px mx-1 shrink-0 relative">
-                    <div className="absolute inset-0 bg-gray-200 rounded-full" />
-                    {past && <div className="absolute inset-0 bg-[#003459]/30 rounded-full transition-all duration-300" />}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 justify-end">
-          {/* Save (always visible) */}
-          <button
-            type="button"
-            onClick={triggerSave}
-            disabled={saveStatus === "saving"}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] disabled:opacity-60"
-          >
-            {saveStatus === "saving"
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : saveStatus === "saved"
-              ? <Check className="w-3.5 h-3.5 text-green-600" />
-              : <Save className="w-3.5 h-3.5" />
-            }
-            {saveBtnLabel}
-          </button>
-
-          {/* Save & Next — only on steps 1 and 2 */}
-          {nextMode && (
-            <button
-              type="button"
-              onClick={() => { triggerSave(); setMode(nextMode); }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-[#003459] hover:bg-[#002845] rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459] focus-visible:ring-offset-1"
-            >
-              Save &amp; Next
-              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-          )}
-
-          {/* Publish — only on Domain & Publishing step */}
-          {mode === "domain" && (
-            <button
-              type="button"
-              onClick={publish}
-              disabled={clinic.status === "published"}
-              className={[
-                "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-                clinic.status === "published"
-                  ? "bg-green-600 cursor-default focus-visible:ring-green-600"
-                  : "bg-[#003459] hover:bg-[#002845] focus-visible:ring-[#003459]",
-              ].join(" ")}
-            >
-              {clinic.status === "published" ? (
-                <><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</>
-              ) : (
-                <><Globe className="w-3.5 h-3.5" aria-hidden="true" /> Publish Site</>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="flex-1 overflow-hidden">
-        {mode === "setup"  && (
-          <HospitalSetupPage
-            onNext={() => { triggerSave(); setMode("editor"); }}
-          />
-        )}
-        {mode === "editor" && (
-          <WebsiteEditorPage
-            onNavigateToSetup={() => setMode("setup")}
-            onNext={() => { triggerSave(); setMode("domain"); }}
-          />
-        )}
-        {mode === "domain" && <DomainManagementPage />}
       </div>
     </div>
   );
 }
 
-// ─── Root wraps everything in the clinic context provider ─────────────────────
+/* ══════════════════════════════════════════════════════════════════════════
+   SiteCreation — Distraction-free 3-step creation flow.
+   No TopBar, no LeftNav. Back button returns to the previous URL.
+══════════════════════════════════════════════════════════════════════════ */
+
+function SiteCreation() {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { clinic, saveStatus, triggerSave, publish } = useClinic();
+
+  const [internalMode, setInternalMode] = useState<InternalMode>("setup");
+
+  // Figure out where the "← Back" button should go
+  const fromPath: string  = (location.state as { from?: string })?.from ?? "/dashboard";
+  const fromRoute         = findRouteByPath(fromPath);
+  const backLabel         = fromRoute?.label ?? "Back";
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+      <WebsiteEditorSubNav
+        internalMode={internalMode}
+        onModeChange={setInternalMode}
+        saveStatus={saveStatus}
+        onSave={triggerSave}
+        onPublish={publish}
+        isPublished={clinic.status === "published"}
+        onBack={() => navigate(fromPath)}
+        backLabel={backLabel}
+      />
+
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {internalMode === "setup" && (
+          <HospitalSetupPage
+            onNext={() => { triggerSave(); setInternalMode("editor"); }}
+          />
+        )}
+        {internalMode === "editor" && (
+          <WebsiteEditorPage
+            onNavigateToSetup={() => setInternalMode("setup")}
+            onNext={() => { triggerSave(); setInternalMode("domain"); }}
+          />
+        )}
+        {internalMode === "domain" && <DomainManagementPage />}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Router — maps URL paths to layouts + pages
+══════════════════════════════════════════════════════════════════════════ */
+
+function AppRouter() {
+  return (
+    <Routes>
+      {/* ── Distraction-free creation (no nav) ── */}
+      <Route path="/sites/new" element={<SiteCreation />} />
+
+      {/* ── Normal layout ── */}
+      <Route element={<AppLayout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard"           element={<DashboardPage />} />
+        <Route path="/sites"               element={<Navigate to="/sites/all" replace />} />
+        <Route path="/sites/all"           element={<SiteListPage />} />
+        <Route path="/sites/groups"        element={<GroupsPage />} />
+        <Route path="/sites/multi-location" element={<MultiLocationPage />} />
+        <Route path="/data-collection"     element={<DataCollectionPage />} />
+        <Route path="/media-library"       element={<MediaLibraryPage />} />
+        <Route path="/banners"             element={<BannerManagementPage />} />
+        <Route path="/approvals"           element={<ApprovalFlowPage />} />
+        <Route path="/users"               element={<UserManagementPage />} />
+        {/* Catch-all → dashboard */}
+        <Route path="*"                    element={<Navigate to="/dashboard" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   App — providers + router (BrowserRouter lives in main.tsx)
+══════════════════════════════════════════════════════════════════════════ */
 
 export default function App() {
   return (
     <ClinicProvider>
-      <AppInner />
+      <ApprovalProvider>
+        <AppRouter />
+      </ApprovalProvider>
     </ClinicProvider>
   );
 }

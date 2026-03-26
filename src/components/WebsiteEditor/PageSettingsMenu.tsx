@@ -127,13 +127,13 @@ export function PageSettingsMenu({
               }
               className={[
                 "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-all",
-                active ? "bg-[#003459]/8 text-[#003459]" : "text-slate-600 hover:bg-slate-50",
+                active ? "bg-teal-600/8 text-teal-600" : "text-slate-600 hover:bg-slate-50",
               ].join(" ")}
             >
               <div
                 className={[
                   "w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors",
-                  active ? "bg-[#003459] text-white" : "bg-slate-100 text-slate-500",
+                  active ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-500",
                 ].join(" ")}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -142,7 +142,7 @@ export function PageSettingsMenu({
                 <div className="text-xs font-semibold leading-none mb-0.5">{label}</div>
                 <div className="text-[10px] text-slate-400 leading-none">{desc}</div>
               </div>
-              {active && <Check className="w-3.5 h-3.5 text-[#003459] shrink-0" />}
+              {active && <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />}
             </button>
           );
         })}
@@ -158,7 +158,7 @@ export function PageSettingsMenu({
               <button
                 type="button"
                 onClick={() => setParentPickerOpen(p => !p)}
-                className="w-full flex items-center justify-between gap-1.5 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md hover:border-[#003459]/30 transition-colors"
+                className="w-full flex items-center justify-between gap-1.5 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md hover:border-teal-600/30 transition-colors"
               >
                 <span className="truncate text-slate-700">
                   {parentLabel ?? "Choose a parent page…"}
@@ -187,7 +187,7 @@ export function PageSettingsMenu({
                           <PIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="flex-1 truncate">{p.label}</span>
                           {page.parentId === p.id && (
-                            <Check className="w-3 h-3 text-[#003459] shrink-0" />
+                            <Check className="w-3 h-3 text-teal-600 shrink-0" />
                           )}
                         </button>
                       );

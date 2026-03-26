@@ -42,8 +42,8 @@ import {
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -75,8 +75,8 @@ function MiniToggle({
         type="button" role="switch" aria-checked={checked} aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent transition-colors
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]
-          ${checked ? "bg-[#003459]" : "bg-gray-200"}`}
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600
+          ${checked ? "bg-teal-600" : "bg-gray-200"}`}
       >
         <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform
           ${checked ? "translate-x-3" : "translate-x-0"}`} />
@@ -487,7 +487,7 @@ function AccordionSection({
             type="button"
             onClick={(e) => { e.stopPropagation(); onToggleVisible(); }}
             aria-label={isVisible ? `Hide ${label}` : `Show ${label}`}
-            className="p-1 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#003459]"
+            className="p-1 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-teal-600"
           >
             {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
           </button>
@@ -645,12 +645,12 @@ function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState 
         className={[
           "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold",
           "transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-          "focus-visible:ring-[#003459] shadow-sm",
+          "focus-visible:ring-teal-600 shadow-sm",
           generating
             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
             : generated
             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-            : "bg-[#003459] text-white hover:bg-[#00253f] active:scale-[0.98]",
+            : "bg-teal-600 text-white hover:bg-[#00253f] active:scale-[0.98]",
         ].join(" ")}
         aria-label="Generate SEO fields with AI"
       >
@@ -862,7 +862,7 @@ function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState 
           <label className={LABEL}>OG / Social Image URL</label>
           {state.ogImageUrl && (
             <button type="button" onClick={() => setPreviewMode("social")}
-              className="text-[10px] text-[#003459] hover:underline focus:outline-none">
+              className="text-[10px] text-teal-600 hover:underline focus:outline-none">
               Preview →
             </button>
           )}
@@ -968,7 +968,7 @@ function SEOTab({ state, onChange, clinicName, clinic, heroState, servicesState 
               const schema = generateVetClinicSchema(clinic);
               setSchemaJson(JSON.stringify(schema, null, 2));
             }}
-            className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#003459] hover:bg-[#002845] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]"
+            className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
           >
             <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             Generate Schema
@@ -1204,8 +1204,8 @@ export function RightPanel({
             key={id} type="button" onClick={() => setTab(id)}
             className={[
               "flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border-b-2 transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#003459]",
-              tab === id ? "border-[#003459] text-[#003459] bg-white" : "border-transparent text-gray-500 hover:text-gray-700",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600",
+              tab === id ? "border-teal-600 text-teal-600 bg-white" : "border-transparent text-gray-500 hover:text-gray-700",
             ].join(" ")}
           >
             <Icon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -1246,7 +1246,7 @@ export function RightPanel({
               <span className="text-[9px] text-gray-400 hidden sm:block">Drag to reorder</span>
               <button
                 type="button" onClick={toggleAllVisible}
-                className="text-[10px] font-medium text-[#003459] hover:underline focus:outline-none"
+                className="text-[10px] font-medium text-teal-600 hover:underline focus:outline-none"
               >
                 {SECTIONS.every((s) => sectionVisibility[s.id]) ? "Hide all" : "Show all"}
               </button>

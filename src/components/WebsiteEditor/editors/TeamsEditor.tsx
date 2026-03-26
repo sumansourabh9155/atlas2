@@ -24,7 +24,7 @@ function MiniToggle({
         aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-7 rounded-full border-2 border-transparent
-          transition-colors ${checked ? "bg-[#003459]" : "bg-gray-200"}`}
+          transition-colors ${checked ? "bg-teal-600" : "bg-gray-200"}`}
       >
         <span
           className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform
@@ -83,9 +83,9 @@ export function TeamsEditor({ state, onChange, clinic, onNavigateToSetup }: Prop
               aria-pressed={state.layout === v}
               className={[
                 "flex-1 h-8 rounded-lg border text-xs font-medium transition-all",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                 state.layout === v
-                  ? "border-[#003459] bg-blue-50 text-[#003459]"
+                  ? "border-teal-600 bg-blue-50 text-teal-600"
                   : "border-gray-200 bg-white text-gray-500 hover:border-gray-300",
               ].join(" ")}
             >
@@ -126,8 +126,8 @@ export function TeamsEditor({ state, onChange, clinic, onNavigateToSetup }: Prop
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[11px] font-medium text-[#003459]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#003459]" aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[11px] font-medium text-teal-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-600" aria-hidden="true" />
             {visibleVets.length} active team member{visibleVets.length !== 1 ? "s" : ""} configured
           </span>
         </div>
@@ -139,7 +139,7 @@ export function TeamsEditor({ state, onChange, clinic, onNavigateToSetup }: Prop
             "w-full flex items-center justify-center gap-2 h-9 rounded-lg border",
             "text-xs font-semibold text-gray-700 bg-white border-gray-200",
             "hover:bg-gray-100 hover:border-gray-300 transition-all",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
             "shadow-sm",
           ].join(" ")}
         >

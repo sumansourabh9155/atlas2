@@ -10,15 +10,15 @@ const AMBER = "#F59E0B";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
 const TEXTAREA =
   "w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors resize-none";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors resize-none";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -330,7 +330,7 @@ export function FeatureGridEditor({ state, onChange }: EditorProps) {
               className={[
                 "flex-1 h-8 rounded-md border text-xs font-semibold transition-all",
                 state.columns === n
-                  ? "bg-[#003459] text-white border-[#003459]"
+                  ? "bg-teal-600 text-white border-teal-600"
                   : "border-gray-200 text-gray-600 hover:border-gray-300",
               ].join(" ")}
             >
@@ -379,7 +379,7 @@ export function FeatureGridEditor({ state, onChange }: EditorProps) {
             type="button"
             onClick={addItem}
             disabled={state.items.length >= MAX_ITEMS}
-            className="text-[11px] font-semibold text-[#003459] hover:text-[#0052a3] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="text-[11px] font-semibold text-teal-600 hover:text-[#0052a3] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             + Add Item
           </button>

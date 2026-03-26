@@ -199,12 +199,12 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
                 <div className={[
                   "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
                   i < step  ? "bg-emerald-500 text-white" :
-                  i === step ? "bg-[#003459] text-white"  :
+                  i === step ? "bg-teal-600 text-white"  :
                                "bg-slate-200 text-slate-400",
                 ].join(" ")}>
                   {i < step ? <Check className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
                 </div>
-                <span className={`text-[10px] font-medium ${i === step ? "text-[#003459]" : i < step ? "text-emerald-600" : "text-slate-400"}`}>
+                <span className={`text-[10px] font-medium ${i === step ? "text-teal-600" : i < step ? "text-emerald-600" : "text-slate-400"}`}>
                   {label}
                 </span>
               </div>
@@ -234,12 +234,12 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
                       className={[
                         "p-4 rounded-xl border-2 text-left transition-all",
                         purchased === val
-                          ? "border-[#003459] bg-[#003459]/5"
+                          ? "border-teal-600 bg-teal-600/5"
                           : "border-slate-200 hover:border-slate-300 bg-white",
                       ].join(" ")}
                     >
-                      <Icon className={`w-5 h-5 mb-2 ${purchased === val ? "text-[#003459]" : "text-slate-400"}`} />
-                      <div className={`text-sm font-semibold ${purchased === val ? "text-[#003459]" : "text-slate-700"}`}>{label}</div>
+                      <Icon className={`w-5 h-5 mb-2 ${purchased === val ? "text-teal-600" : "text-slate-400"}`} />
+                      <div className={`text-sm font-semibold ${purchased === val ? "text-teal-600" : "text-slate-700"}`}>{label}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">{desc}</div>
                     </button>
                   ))}
@@ -278,7 +278,7 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
                         value={hostname}
                         onChange={e => setHostname(e.target.value)}
                         placeholder="yourpractice.com"
-                        className="w-full pl-9 pr-3 h-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459] transition-colors"
+                        className="w-full pl-9 pr-3 h-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition-colors"
                       />
                     </div>
                     {hostname && !isValidDomain && (
@@ -297,7 +297,7 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
                           className={[
                             "px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors",
                             registrar === r
-                              ? "bg-[#003459] text-white border-[#003459]"
+                              ? "bg-teal-600 text-white border-teal-600"
                               : "bg-white text-slate-600 border-slate-200 hover:border-slate-300",
                           ].join(" ")}
                         >
@@ -338,14 +338,14 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
                 </div>
               </div>
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-blue-700">DNS changes can take up to 48 hours to propagate. Most registrars update within 10–30 minutes.</p>
+                <Info className="w-3.5 h-3.5 text-teal-500 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-teal-700">DNS changes can take up to 48 hours to propagate. Most registrars update within 10–30 minutes.</p>
               </div>
               <button
                 type="button"
                 onClick={handleVerify}
                 disabled={verifying}
-                className="w-full h-9 rounded-lg bg-[#003459] text-white text-sm font-semibold hover:bg-[#002845] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full h-9 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {verifying ? (
                   <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying…</>
@@ -445,8 +445,8 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
               </div>
 
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                <Zap className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-blue-700">
+                <Zap className="w-3.5 h-3.5 text-teal-500 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-teal-700">
                   SSL certificates are provisioned automatically via Let's Encrypt once DNS propagates. This typically takes 10–30 minutes.
                 </p>
               </div>
@@ -467,7 +467,7 @@ function AddDomainWizard({ onClose, onAdd }: AddDomainWizardProps) {
             type="button"
             onClick={step < 3 ? () => setStep(s => s + 1) : handleFinish}
             disabled={step === 0 && (purchased !== true || !isValidDomain)}
-            className="inline-flex items-center gap-2 px-5 py-1.5 bg-[#003459] text-white text-sm font-semibold rounded-lg hover:bg-[#002845] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-1.5 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {step < 3 ? (
               <>Next <ArrowRight className="w-3.5 h-3.5" /></>
@@ -495,18 +495,18 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-all ${domain.isPrimary ? "border-[#003459]/25 bg-[#003459]/2" : "border-slate-200 bg-white"}`}>
+    <div className={`border rounded-xl overflow-hidden transition-all ${domain.isPrimary ? "border-teal-600/25 bg-teal-600/2" : "border-slate-200 bg-white"}`}>
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Icon + domain */}
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${domain.isPrimary ? "bg-[#003459]" : "bg-slate-100"}`}>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${domain.isPrimary ? "bg-teal-600" : "bg-slate-100"}`}>
           <Globe className={`w-4 h-4 ${domain.isPrimary ? "text-white" : "text-slate-500"}`} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-slate-900 truncate">{domain.hostname}</span>
             {domain.isPrimary && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#003459]/10 text-[#003459] text-[10px] font-bold">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-teal-600/10 text-teal-600 text-[10px] font-bold">
                 <Star className="w-2.5 h-2.5 fill-current" /> Primary
               </span>
             )}
@@ -644,7 +644,7 @@ function PublishStatusCard({
     Icon: React.ElementType; label: string; desc: string;
   }> = {
     draft:            { color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200",   Icon: AlertTriangle,  label: "Draft",             desc: "Your website is not visible to the public." },
-    pending_approval: { color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200",    Icon: Clock,          label: "Pending Approval",  desc: "Your publish request is under review." },
+    pending_approval: { color: "text-teal-700",    bg: "bg-teal-50",    border: "border-teal-200",    Icon: Clock,          label: "Pending Approval",  desc: "Your publish request is under review." },
     published:        { color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", Icon: CheckCircle2,   label: "Published",         desc: "Your website is live and visible to the public." },
   };
   const { color, bg, border, Icon, label, desc } = map[publishStatus];
@@ -664,13 +664,13 @@ function PublishStatusCard({
             <button
               type="button"
               onClick={onRequestApproval}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#003459] rounded-lg hover:bg-[#002845] transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors"
             >
               <Zap className="w-3 h-3" /> Request Publish
             </button>
           )}
           {publishStatus === "pending_approval" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-white border border-blue-200 rounded-lg">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 bg-white border border-teal-200 rounded-lg">
               <Clock className="w-3 h-3" /> Under Review
             </span>
           )}
@@ -757,15 +757,15 @@ export function DomainManagementPage() {
 
         {/* ── Multi-domain canonical notice ── */}
         {activeDomains.length > 1 && multiDomainNote && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
-            <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-teal-50 border border-teal-200">
+            <Info className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-xs font-semibold text-blue-800">Multiple active domains detected</p>
-              <p className="text-[11px] text-blue-600 mt-0.5">
+              <p className="text-xs font-semibold text-teal-800">Multiple active domains detected</p>
+              <p className="text-[11px] text-teal-600 mt-0.5">
                 Set one domain as <strong>Primary</strong> — it will be used as the canonical URL for SEO. All other domains will redirect to it automatically.
               </p>
             </div>
-            <button type="button" onClick={() => setMultiDomainNote(false)} className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors">
+            <button type="button" onClick={() => setMultiDomainNote(false)} className="p-0.5 text-teal-400 hover:text-teal-600 transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -781,7 +781,7 @@ export function DomainManagementPage() {
             <button
               type="button"
               onClick={() => setAddWizardOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#003459] bg-white border border-[#003459]/30 rounded-lg hover:bg-[#003459]/5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-600 bg-white border border-teal-600/30 rounded-lg hover:bg-teal-600/5 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" /> Add Domain
             </button>
@@ -803,7 +803,7 @@ export function DomainManagementPage() {
         {/* ── SSL overview ── */}
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
-            <Shield className="w-4 h-4 text-[#003459]" />
+            <Shield className="w-4 h-4 text-teal-600" />
             <h2 className="text-sm font-bold text-slate-800">SSL Certificates</h2>
           </div>
           <div className="p-4 space-y-2">
@@ -834,7 +834,7 @@ export function DomainManagementPage() {
         {/* ── Server info ── */}
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
-            <Server className="w-4 h-4 text-[#003459]" />
+            <Server className="w-4 h-4 text-teal-600" />
             <h2 className="text-sm font-bold text-slate-800">Server & Routing</h2>
           </div>
           <div className="p-4 grid grid-cols-2 gap-3">
@@ -857,7 +857,7 @@ export function DomainManagementPage() {
         {/* ── Publish workflow explanation ── */}
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
-            <Zap className="w-4 h-4 text-[#003459]" />
+            <Zap className="w-4 h-4 text-teal-600" />
             <h2 className="text-sm font-bold text-slate-800">How Publishing Works</h2>
           </div>
           <div className="p-4">
@@ -870,7 +870,7 @@ export function DomainManagementPage() {
               ].map(({ step, title, desc }, i, arr) => (
                 <div key={step} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-[#003459]/10 text-[#003459] flex items-center justify-center text-[10px] font-bold shrink-0">{step}</div>
+                    <div className="w-6 h-6 rounded-full bg-teal-600/10 text-teal-600 flex items-center justify-center text-[10px] font-bold shrink-0">{step}</div>
                     {i < arr.length - 1 && <div className="w-px flex-1 bg-slate-200 my-1" />}
                   </div>
                   <div className={`pb-4 ${i === arr.length - 1 ? "" : ""}`}>

@@ -7,15 +7,15 @@ const AMBER = "#F59E0B";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
 const TEXTAREA =
   "w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors resize-none";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors resize-none";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -205,7 +205,7 @@ export function EmailCaptureEditor({ state, onChange }: EditorProps) {
               className={[
                 "flex-1 h-8 rounded-md border text-xs font-semibold transition-all",
                 state.layout === l
-                  ? "bg-[#003459] text-white border-[#003459]"
+                  ? "bg-teal-600 text-white border-teal-600"
                   : "border-gray-200 text-gray-600 hover:border-gray-300",
               ].join(" ")}
             >
@@ -281,8 +281,8 @@ export function EmailCaptureEditor({ state, onChange }: EditorProps) {
           onClick={() => onChange({ showNameField: !state.showNameField })}
           className={[
             "relative inline-flex h-5 w-9 rounded-full border-2 border-transparent transition-colors",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
-            state.showNameField ? "bg-[#003459]" : "bg-gray-200",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
+            state.showNameField ? "bg-teal-600" : "bg-gray-200",
           ].join(" ")}
         >
           <span

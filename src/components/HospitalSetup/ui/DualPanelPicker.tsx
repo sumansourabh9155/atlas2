@@ -134,7 +134,7 @@ export function DualPanelPicker({
           <button
             type="button"
             onClick={selectAll}
-            className="text-xs font-semibold text-[#003459] hover:underline"
+            className="text-xs font-semibold text-teal-600 hover:underline"
           >
             Select all
           </button>
@@ -170,7 +170,7 @@ export function DualPanelPicker({
                 <button
                   type="button"
                   onClick={() => addItem(item.id)}
-                  className="shrink-0 w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-[#003459] hover:bg-[#003459]/10 hover:border-[#003459]/30 transition-colors"
+                  className="shrink-0 w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-teal-600 hover:bg-teal-600/10 hover:border-teal-600/30 transition-colors"
                   aria-label={`Add ${item.name}`}
                 >
                   <Plus className="w-3.5 h-3.5" aria-hidden="true" />
@@ -204,7 +204,7 @@ export function DualPanelPicker({
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs font-semibold text-[#003459] hover:underline"
+            className="text-xs font-semibold text-teal-600 hover:underline"
           >
             Clear Selected
           </button>

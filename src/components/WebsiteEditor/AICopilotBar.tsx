@@ -186,13 +186,13 @@ function ContextPill({
       style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}
       title={`AI will target: ${label}`}
     >
-      <span className="text-[10px] font-semibold text-blue-700">{label}</span>
+      <span className="text-[10px] font-semibold text-teal-700">{label}</span>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onClear(); }}
         disabled={disabled}
         aria-label={`Clear ${label} context`}
-        className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-blue-400 hover:text-blue-700 hover:bg-blue-100 transition-colors focus:outline-none"
+        className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-teal-400 hover:text-teal-700 hover:bg-teal-100 transition-colors focus:outline-none"
       >
         <X className="w-2.5 h-2.5" />
       </button>

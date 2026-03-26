@@ -7,13 +7,13 @@ const TEAL = "#0F766E";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const TEXTAREA =
   "w-full px-2.5 py-1.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors resize-none";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors resize-none";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -187,7 +187,7 @@ export function HeroCenteredEditor({
       </div>
       <div>
         <label className={LABEL}>Overlay darkness: {state.overlayDarkness}%</label>
-        <input type="range" min={0} max={90} value={state.overlayDarkness} onChange={(e) => onChange({ overlayDarkness: Number(e.target.value) })} className="w-full accent-[#003459]" />
+        <input type="range" min={0} max={90} value={state.overlayDarkness} onChange={(e) => onChange({ overlayDarkness: Number(e.target.value) })} className="w-full accent-teal-600" />
       </div>
       <div>
         <label className={LABEL}>Section height</label>

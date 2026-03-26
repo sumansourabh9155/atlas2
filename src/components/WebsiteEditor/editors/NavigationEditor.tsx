@@ -12,8 +12,8 @@ import type { NavConfigCtx } from "../../../context/ClinicContext";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -46,8 +46,8 @@ function MiniToggle({
         onClick={() => onChange(!checked)}
         className={[
           "relative inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
-          checked ? "bg-[#003459]" : "bg-gray-200",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
+          checked ? "bg-teal-600" : "bg-gray-200",
         ].join(" ")}
       >
         <span
@@ -65,7 +65,7 @@ function MiniToggle({
 const SCHEME_OPTIONS: { value: NavConfigCtx["colorScheme"]; label: string; bg: string; text: string; border: string }[] = [
   { value: "light", label: "Light", bg: "#ffffff", text: "#111827", border: "#e5e7eb" },
   { value: "dark",  label: "Dark",  bg: "#111827", text: "#ffffff", border: "#374151" },
-  { value: "brand", label: "Brand", bg: "#003459", text: "#ffffff", border: "#003459" },
+  { value: "brand", label: "Brand", bg: "teal-600", text: "#ffffff", border: "teal-600" },
 ];
 
 function ColorSchemeSelector({
@@ -87,9 +87,9 @@ function ColorSchemeSelector({
             title={opt.label}
             className={[
               "flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-all",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
               value === opt.value
-                ? "border-[#003459] shadow-sm"
+                ? "border-teal-600 shadow-sm"
                 : "border-gray-200 hover:border-gray-300",
             ].join(" ")}
           >
@@ -103,7 +103,7 @@ function ColorSchemeSelector({
             </div>
             <span
               className={`text-[10px] font-medium ${
-                value === opt.value ? "text-[#003459]" : "text-gray-500"
+                value === opt.value ? "text-teal-600" : "text-gray-500"
               }`}
             >
               {opt.label}

@@ -4,8 +4,8 @@ import { AITextField, AITextarea } from "../ai/AITextField";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -46,8 +46,8 @@ function CtaRow({
           aria-label={`${label} enabled`}
           onClick={() => onChange({ ...value, enabled: !value.enabled })}
           className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent
-            transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]
-            ${value.enabled ? "bg-[#003459]" : "bg-gray-200"}`}
+            transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600
+            ${value.enabled ? "bg-teal-600" : "bg-gray-200"}`}
         >
           <span
             className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform
@@ -188,7 +188,7 @@ export function HeroEditor({ state, onChange, primaryColor }: Props) {
           onChange={(e) =>
             onChange({ overlayOpacity: Number(e.target.value) / 100 })
           }
-          className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#003459] bg-gray-200"
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-teal-600 bg-gray-200"
           aria-label="Overlay opacity"
         />
         <div className="flex justify-between mt-1 text-[10px] text-gray-400">
@@ -213,9 +213,9 @@ export function HeroEditor({ state, onChange, primaryColor }: Props) {
                 aria-pressed={active}
                 className={[
                   "flex flex-col items-center gap-1 py-2.5 rounded-lg border text-xs font-medium",
-                  "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003459]",
+                  "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                   active
-                    ? "border-[#003459] bg-blue-50 text-[#003459] shadow-sm"
+                    ? "border-teal-600 bg-blue-50 text-teal-600 shadow-sm"
                     : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700",
                 ].join(" ")}
               >

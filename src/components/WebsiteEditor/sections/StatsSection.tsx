@@ -6,8 +6,8 @@ const TEAL = "#0F766E";
 
 const INPUT =
   "w-full h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003459] " +
-  "focus:border-[#003459] transition-colors";
+  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600 " +
+  "focus:border-teal-600 transition-colors";
 
 const LABEL = "block text-xs font-medium text-gray-600 mb-1";
 
@@ -132,14 +132,14 @@ export function StatsEditor({
                 type="text"
                 value={stat.value}
                 onChange={(e) => updateStat(i, "value", e.target.value)}
-                className="w-[68px] h-8 px-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459] font-bold"
+                className="w-[68px] h-8 px-2 text-sm text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 font-bold"
                 placeholder="47k+"
               />
               <input
                 type="text"
                 value={stat.label}
                 onChange={(e) => updateStat(i, "label", e.target.value)}
-                className="flex-1 h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#003459] focus:border-[#003459]"
+                className="flex-1 h-8 px-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600"
                 placeholder="Patients Treated"
               />
             </div>

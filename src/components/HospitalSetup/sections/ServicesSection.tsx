@@ -59,14 +59,14 @@ export function ServicesSection({ data, onChange }: Props) {
     <div className="flex flex-col gap-4">
 
       {/* ── Pricing document URL ── */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
-        <Info className="w-4 h-4 text-blue-400 shrink-0" aria-hidden="true" />
+      <div className="flex items-center gap-3 px-4 py-3 bg-teal-50 border border-teal-100 rounded-xl">
+        <Info className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
         <input
           type="url"
           value={data.pricingUrl}
           onChange={(e) => onChange({ pricingUrl: e.target.value })}
           placeholder="PDF file or link that contains location pricing information"
-          className="flex-1 text-sm text-blue-900 bg-transparent focus:outline-none placeholder:text-blue-400/70 min-w-0"
+          className="flex-1 text-sm text-teal-900 bg-transparent focus:outline-none placeholder:text-teal-400/70 min-w-0"
         />
       </div>
 
