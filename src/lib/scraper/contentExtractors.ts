@@ -96,7 +96,7 @@ export function extractClinicName(doc: Document, baseUrl: string): ExtractionRes
     // ignore
   }
 
-  return createResult(null, 0, "not-found", "");
+  return createResult<string>(null, 0, "not-found", "");
 }
 
 /**
@@ -213,7 +213,7 @@ export function extractAddress(doc: Document): ExtractionResult<Address> {
     }
   }
 
-  return createResult(null, 0, "not-found", "");
+  return createResult<Address>(null, 0, "not-found", "");
 }
 
 /**
@@ -228,7 +228,7 @@ export function extractVeterinarians(doc: Document): ExtractionResult<ScrapedVet
     "[class*='team'], [class*='veterinarian'], [class*='staff'], [class*='doctor']"
   );
   if (!teamSection) {
-    return createResult(null, 0, "not-found", "");
+    return createResult<ScrapedVeterinarian[]>(null, 0, "not-found", "");
   }
 
   // Find individual team member cards
@@ -292,7 +292,7 @@ export function extractServices(doc: Document): ExtractionResult<ScrapedService[
     "[class*='service'], [class*='treatment'], [class*='offering']"
   );
   if (!servicesSection) {
-    return createResult(null, 0, "not-found", "");
+    return createResult<ScrapedService[]>(null, 0, "not-found", "");
   }
 
   // Find service items
@@ -335,7 +335,7 @@ export function extractTestimonials(doc: Document): ExtractionResult<ScrapedTest
     "[class*='testimonial'], [class*='review'], [class*='quote']"
   );
   if (!testSection) {
-    return createResult(null, 0, "not-found", "");
+    return createResult<ScrapedTestimonial[]>(null, 0, "not-found", "");
   }
 
   // Find testimonial items
@@ -442,7 +442,7 @@ export function extractHospitalType(doc: Document): ExtractionResult<string> {
     }
   }
 
-  return createResult(null, 0, "not-found", "");
+  return createResult<string>(null, 0, "not-found", "");
 }
 
 /**
@@ -486,7 +486,7 @@ export function extractBusinessHours(doc: Document): ExtractionResult<BusinessHo
     "[class*='hours'], [class*='schedule'], [class*='opening']"
   );
   if (!hoursSection) {
-    return createResult(null, 0, "not-found", "");
+    return createResult<BusinessHours[]>(null, 0, "not-found", "");
   }
 
   const text = extractText(hoursSection);

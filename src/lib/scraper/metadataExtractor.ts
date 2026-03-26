@@ -145,7 +145,7 @@ export function extractBreadcrumbs(schemas: SchemaOrgData[]): Array<{ name: stri
   }
 
   return (breadcrumb.itemListElement as unknown[])
-    .map((item: unknown) => {
+    .map((item: unknown): { name: string; url?: string } | null => {
       if (typeof item === "object" && item !== null) {
         const obj = item as Record<string, unknown>;
         return {

@@ -3,7 +3,7 @@
  * Interfaces for scraping, parsing, and data extraction
  */
 
-import { ClinicWebsiteDraft } from "@/types/clinic";
+import { ClinicWebsiteDraft } from "../../types/clinic";
 
 /**
  * Extraction result with confidence score and source

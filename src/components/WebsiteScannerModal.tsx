@@ -5,9 +5,9 @@
 
 import React, { useState } from "react";
 import { X, Loader, AlertCircle, CheckCircle, Zap } from "lucide-react";
-import { scrapeWebsite } from "@/lib/scraper/websiteScraper";
-import { ScrapeResult } from "@/lib/scraper/types";
-import { useClinicContext } from "@/context/ClinicContext";
+import { scrapeWebsite } from "../lib/scraper/websiteScraper";
+import { ScrapeResult } from "../lib/scraper/types";
+import { useClinic } from "../context/ClinicContext";
 
 type Step = "url-input" | "scanning" | "review" | "complete";
 
@@ -17,7 +17,7 @@ interface WebsiteScannerModalProps {
 }
 
 export function WebsiteScannerModal({ isOpen, onClose }: WebsiteScannerModalProps) {
-  const { updateGeneral, updateTaxonomy, updateContact } = useClinicContext();
+  const { updateGeneral, updateTaxonomy, updateContact } = useClinic();
   const [step, setStep] = useState<Step>("url-input");
   const [url, setUrl] = useState("https://yourvetclinic.com");
   const [progress, setProgress] = useState(0);
@@ -35,7 +35,7 @@ export function WebsiteScannerModal({ isOpen, onClose }: WebsiteScannerModalProp
     setStep("scanning");
 
     try {
-      const scanResult = await scrapeWebsite(url, {}, (prog, status) => {
+      const scanResult = await scrapeWebsite(url, {}, (prog: number, status: string) => {
         setProgress(Math.round(prog));
         setProgressStatus(status);
       });
@@ -54,7 +54,8 @@ export function WebsiteScannerModal({ isOpen, onClose }: WebsiteScannerModalProp
       // Pre-select high-confidence fields
       const selected = new Set<string>();
       Object.entries(scanResult.scrapedContent).forEach(([key, extraction]) => {
-        if (extraction.confidence >= 0.6 && extraction.value !== null) {
+        const ext = extraction as { value: unknown; confidence: number };
+        if (ext.confidence >= 0.6 && ext.value !== null) {
           selected.add(key);
         }
       });

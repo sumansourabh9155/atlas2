@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import { ClinicWebsiteDraft, createEmptyClinicWebsite } from "@/types/clinic";
+import { ClinicWebsiteDraft, createEmptyClinicWebsite } from "../../types/clinic";
 import {
   parseHtml,
   extractText,
@@ -324,7 +324,8 @@ export class WebsiteScraper {
       base.contact!.address = scraped.address.value;
     }
     if (scraped.businessHours.value) {
-      base.contact!.businessHours = scraped.businessHours.value;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      base.contact!.businessHours = scraped.businessHours.value as any;
     }
 
     // Team
@@ -353,6 +354,7 @@ export class WebsiteScraper {
         duration: s.duration,
         order: idx,
         isVisible: true,
+        isHighlighted: false,
       }));
     }
 
@@ -386,26 +388,28 @@ export class WebsiteScraper {
 
   private extractPrimaryColor(doc: Document) {
     const { primary } = extractPrimaryAndSecondaryColors(doc);
-    return (
-      primary || {
-        value: null,
-        confidence: 0,
-        source: "not-found",
-        raw: "",
-      }
-    );
+    if (primary) {
+      return {
+        value: primary.color,
+        confidence: primary.confidence,
+        source: primary.source,
+        raw: primary.color,
+      };
+    }
+    return { value: null, confidence: 0, source: "not-found", raw: "" };
   }
 
   private extractSecondaryColor(doc: Document) {
     const { secondary } = extractPrimaryAndSecondaryColors(doc);
-    return (
-      secondary || {
-        value: null,
-        confidence: 0,
-        source: "not-found",
-        raw: "",
-      }
-    );
+    if (secondary) {
+      return {
+        value: secondary.color,
+        confidence: secondary.confidence,
+        source: secondary.source,
+        raw: secondary.color,
+      };
+    }
+    return { value: null, confidence: 0, source: "not-found", raw: "" };
   }
 
   private extractPhone(doc: Document) {
