@@ -6,6 +6,20 @@
 import React, { useState } from "react";
 import { Search, ChevronDown, MoreVertical, ArrowUpDown, CheckCircle2, Clock, FileText, Globe } from "lucide-react";
 
+const STATE_ABBR: Record<string, string> = {
+  "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
+  "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
+  "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA",
+  "Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD",
+  "Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO",
+  "Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ",
+  "New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH",
+  "Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC",
+  "South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT",
+  "Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY",
+};
+const abbr = (state: string) => STATE_ABBR[state] ?? state;
+
 interface Site {
   id: string;
   name: string;
@@ -152,16 +166,16 @@ export function SiteListPage() {
 
           {/* Table — fixed height = header (45.5px) + 8 rows (55px × 8 = 440px) = 486px */}
           <div className="overflow-auto" style={{ height: "486px" }}>
-            <table className="w-full text-sm table-fixed border-collapse">
+            <table className="w-full min-w-[760px] text-sm table-fixed border-collapse">
               <colgroup>
-                <col style={{ width: "44px" }} />
-                <col style={{ width: "22%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "80px" }} />
+                <col style={{ width: "40px" }} />
+                <col style={{ width: "190px" }} />
+                <col style={{ width: "110px" }} />
+                <col style={{ width: "130px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "48px" }} />
+                <col style={{ width: "150px" }} />
+                <col style={{ width: "60px" }} />
               </colgroup>
 
               <thead className="sticky top-0 z-10">
@@ -224,8 +238,8 @@ export function SiteListPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-gray-600 truncate">{site.businessType}</td>
-                    <td className="px-4 py-3.5 text-gray-600">{site.city}</td>
-                    <td className="px-4 py-3.5 text-gray-600">{site.state}</td>
+                    <td className="px-4 py-3.5 text-gray-600 truncate">{site.city}</td>
+                    <td className="px-4 py-3.5 text-gray-600 font-medium">{abbr(site.state)}</td>
                     <td className="px-4 py-3.5 text-gray-600 truncate">{site.groupName || "---"}</td>
                     <td className="px-4 py-3.5 pr-6 text-right">
                       <button className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">

@@ -43,6 +43,7 @@ import { WebsiteEditorPage }    from "./components/WebsiteEditor/WebsiteEditorPa
 import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagementPage";
 
 import { findRouteByPath }      from "./config/routes.config";
+import { LayoutProvider }       from "./context/LayoutContext";
 
 /* ══════════════════════════════════════════════════════════════════════════
    AppLayout — Standard layout: TopBar + LeftNav + page content
@@ -67,24 +68,26 @@ function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <TopBar onCTAClick={handleCTAAction} />
+    <LayoutProvider>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <TopBar onCTAClick={handleCTAAction} />
 
-      <div className="flex-1 overflow-hidden flex">
-        <LeftNavigation
-          approvalCount={approvalCount}
-          userRole="admin"
-          userName="Admin User"
-          userEmail="admin@nexio.com"
-          onLogout={() => console.log("Logout")}
-        />
+        <div className="flex-1 overflow-hidden flex">
+          <LeftNavigation
+            approvalCount={approvalCount}
+            userRole="admin"
+            userName="Admin User"
+            userEmail="admin@nexio.com"
+            onLogout={() => console.log("Logout")}
+          />
 
-        {/* Page content — rendered by React Router */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <Outlet />
+          {/* Page content — rendered by React Router */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Outlet />
+          </div>
         </div>
       </div>
-    </div>
+    </LayoutProvider>
   );
 }
 

@@ -9,6 +9,21 @@ import {
   Building2, Users, CheckCircle2,
 } from "lucide-react";
 
+/* ── State abbreviations ─────────────────────────────────────────────────── */
+const STATE_ABBR: Record<string, string> = {
+  "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
+  "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
+  "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA",
+  "Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD",
+  "Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO",
+  "Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ",
+  "New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH",
+  "Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC",
+  "South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT",
+  "Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY",
+};
+const abbr = (state: string) => STATE_ABBR[state] ?? state;
+
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
 type SiteStatus = "published" | "scheduled" | "draft" | "live_domain";
@@ -311,16 +326,16 @@ export function GroupsPage() {
 
             {/* Scrollable Table */}
             <div className="flex-1 overflow-auto min-h-0">
-              <table className="w-full text-sm table-fixed border-collapse">
+              <table className="w-full min-w-[680px] text-sm table-fixed border-collapse">
                 <colgroup>
-                  <col style={{ width: "44px" }} />
-                  <col style={{ width: "22%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "9%" }} />
-                  <col style={{ width: "20%" }} />
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "8%" }} />
-                  <col style={{ width: "80px" }} />
+                  <col style={{ width: "40px" }} />
+                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "115px" }} />
+                  <col style={{ width: "84px" }} />
+                  <col style={{ width: "135px" }} />
+                  <col style={{ width: "90px" }} />
+                  <col style={{ width: "50px" }} />
+                  <col style={{ width: "60px" }} />
                 </colgroup>
 
                 <thead className="sticky top-0 z-10">
@@ -384,8 +399,8 @@ export function GroupsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-gray-600 truncate">{m.businessType}</td>
-                        <td className="px-4 py-3.5 text-gray-600">{m.city}</td>
-                        <td className="px-4 py-3.5 text-gray-600">{m.state}</td>
+                        <td className="px-4 py-3.5 text-gray-600 truncate">{m.city}</td>
+                        <td className="px-4 py-3.5 text-gray-600 font-medium">{abbr(m.state)}</td>
                         <td className="px-4 py-3.5 pr-6 text-right">
                           <button className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">
                             <MoreVertical size={14} className="text-gray-400" />

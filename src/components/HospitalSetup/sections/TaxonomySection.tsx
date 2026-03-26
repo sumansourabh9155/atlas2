@@ -24,17 +24,17 @@ export function TaxonomySection({ data, onChange }: Props) {
         </span>
         <div>
           <h3 className="text-sm font-semibold text-gray-900">
-            Species & Specialisations
+            Specialisations & Focus Areas
           </h3>
           <p className="mt-0.5 text-xs text-gray-500">
-            Select every animal type your clinic treats. This powers directory
+            Select every category your business serves. This powers directory
             search filters and the Services page.
           </p>
         </div>
       </div>
 
       <FormField
-        label="Pet Types Treated"
+        label="Service Categories"
         hint="Click to select. You can choose multiple."
         required
       >
@@ -50,7 +50,7 @@ export function TaxonomySection({ data, onChange }: Props) {
         <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <span className="text-amber-500 text-base leading-none" aria-hidden="true">⚠</span>
           <p className="text-xs text-amber-700">
-            Select at least one pet type before publishing. This is required to
+            Select at least one category before publishing. This is required to
             appear in the directory.
           </p>
         </div>

@@ -37,14 +37,14 @@ const SECTIONS: {
   description: string;
   Icon: React.ElementType;
 }[] = [
-  { id: "basic",        label: "Basic Information",  description: "Name, slug, colors & logo",       Icon: Type     },
-  { id: "taxonomy",     label: "Clinic Type & Pets", description: "Hospital type & species treated",  Icon: Tags     },
-  { id: "contact",      label: "Location & Contact", description: "Address, phone & email",           Icon: MapPin   },
-  { id: "hours",        label: "Operating Hours",    description: "Weekly availability schedule",     Icon: Clock      },
-  { id: "services",     label: "Available Services", description: "Services offered at this location", Icon: Briefcase  },
-  { id: "vets",         label: "Veterinarians",       description: "Team members at this location",    Icon: Users      },
-  { id: "integrations", label: "Integrations",        description: "Tracking, chatbots & consent",    Icon: Settings   },
-  { id: "footer",       label: "Footer & Policies",   description: "Links, subscription & legal",      Icon: FileText   },
+  { id: "basic",        label: "Basic Information",  description: "Name, slug, colors & logo",        Icon: Type      },
+  { id: "taxonomy",     label: "Business Type",      description: "Industry type & specialties",       Icon: Tags      },
+  { id: "contact",      label: "Location & Contact", description: "Address, phone & email",            Icon: MapPin    },
+  { id: "hours",        label: "Operating Hours",    description: "Weekly availability schedule",      Icon: Clock     },
+  { id: "services",     label: "Available Services", description: "Services offered at this location", Icon: Briefcase },
+  { id: "vets",         label: "Team Members",        description: "Staff & team at this location",    Icon: Users     },
+  { id: "integrations", label: "Integrations",        description: "Tracking, chatbots & consent",    Icon: Settings  },
+  { id: "footer",       label: "Footer & Policies",   description: "Links, subscription & legal",     Icon: FileText  },
 ];
 
 const STICKY_BAR_HEIGHT = 57; // px — height of the sticky save bar
@@ -324,7 +324,7 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
             </span>
             <div className="overflow-hidden">
               <p className="text-sm font-semibold text-gray-900 truncate">
-                {form.basic.general.name || "New Clinic"}
+                {form.basic.general.name || "New Site"}
               </p>
               <p className="text-xs text-gray-400 truncate font-mono">
                 /{form.basic.general.slug || "your-slug"}

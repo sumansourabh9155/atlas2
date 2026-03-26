@@ -15,8 +15,8 @@ export function VetsSection({ data, onChange }: Props) {
       items={VET_PICKER_ITEMS}
       selectedIds={data.selectedVetIds}
       onChange={(ids) => onChange({ selectedVetIds: ids })}
-      searchPlaceholder="Search for Veterinarians"
-      columnLabel="Veterinarian Name"
+      searchPlaceholder="Search team members"
+      columnLabel="Team Member Name"
     />
   );
 }

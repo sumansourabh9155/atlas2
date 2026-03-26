@@ -36,13 +36,13 @@ const PRESET_COLORS = [
 ];
 
 const HOSPITAL_TYPES: { value: HospitalType; label: string }[] = [
-  { value: "general_practice",       label: "General Practice" },
-  { value: "specialty_referral",     label: "Specialty & Referral" },
-  { value: "emergency_critical_care",label: "Emergency & Critical Care" },
-  { value: "mobile_clinic",          label: "Mobile Clinic" },
-  { value: "exotic_animal",          label: "Exotic Animal" },
-  { value: "rehabilitation",         label: "Rehabilitation" },
-  { value: "shelter_humane",         label: "Shelter / Humane Society" },
+  { value: "general_practice",       label: "General Practice / Retail"     },
+  { value: "specialty_referral",     label: "Specialty & Referral"          },
+  { value: "emergency_critical_care",label: "Emergency & Critical Services" },
+  { value: "mobile_clinic",          label: "Mobile / On-Demand"            },
+  { value: "exotic_animal",          label: "Niche / Exotic"                },
+  { value: "rehabilitation",         label: "Rehabilitation / Wellness"     },
+  { value: "shelter_humane",         label: "Non-Profit / Community"        },
 ];
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ function SlugField({ value, onChange, name = "slug" }: SlugFieldProps) {
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           className={`${INPUT} pl-8 pr-8 font-mono text-xs`}
-          placeholder="your-clinic-name"
+          placeholder="your-business-name"
           aria-describedby="slug-hint slug-status"
           aria-invalid={!valid && value.length > 0}
         />
@@ -164,7 +164,7 @@ function SlugField({ value, onChange, name = "slug" }: SlugFieldProps) {
         id="slug-hint"
         className="flex items-center gap-1 text-xs text-gray-400 font-mono"
       >
-        <span>yourclinic.com/</span>
+        <span>yourbusiness.com/</span>
         <span className={valid ? "text-teal-600 font-semibold" : "text-gray-400"}>
           {value || "your-slug"}
         </span>
@@ -301,10 +301,10 @@ export function BasicInfoSection({ data, onChange }: Props) {
       {/* ── Identity ── */}
       <SectionCard
         icon={Type}
-        title="Clinic Identity"
+        title="Business Identity"
         description="This information appears in your site header, browser tab, and search results."
       >
-        <FormField label="Clinic Name" htmlFor="name" required>
+        <FormField label="Business Name" htmlFor="name" required>
           <input
             id="name"
             name="name"
@@ -312,7 +312,7 @@ export function BasicInfoSection({ data, onChange }: Props) {
             value={general.name}
             onChange={(e) => handleNameChange(e.target.value)}
             className={INPUT}
-            placeholder="Austin Paws Specialty & Emergency"
+            placeholder="e.g. Luminary Salon & Spa"
             autoComplete="organization"
           />
         </FormField>
@@ -325,9 +325,9 @@ export function BasicInfoSection({ data, onChange }: Props) {
         />
 
         <FormField
-          label="Hospital Type"
+          label="Business Type"
           htmlFor="hospitalType"
-          hint="Used to categorise your clinic in the directory."
+          hint="Used to categorise your business in the directory."
           required
         >
           <select
@@ -360,7 +360,7 @@ export function BasicInfoSection({ data, onChange }: Props) {
               onChange={(e) => setGeneral({ tagline: e.target.value })}
               maxLength={160}
               className={`${INPUT} pr-14`}
-              placeholder="Compassionate care for every pet."
+              placeholder="e.g. Excellence in every service, every visit."
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 pointer-events-none">
               {(general.tagline ?? "").length}/160
@@ -383,7 +383,7 @@ export function BasicInfoSection({ data, onChange }: Props) {
               rows={3}
               maxLength={320}
               className={`${INPUT} h-auto py-2 resize-none`}
-              placeholder="We provide advanced veterinary care with board-certified specialists..."
+              placeholder="e.g. We offer premium services with expert professionals..."
             />
             <span className="absolute bottom-2 right-3 text-xs text-gray-400 pointer-events-none">
               {(general.metaDescription ?? "").length}/320
