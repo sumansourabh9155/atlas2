@@ -60,7 +60,7 @@ export function LeftNavigation({
   approvalCount = 0,
   userRole      = "admin",
   userName      = "Admin",
-  userEmail     = "admin@nexio.com",
+  userEmail     = "admin@atlas.com",
   onLogout,
 }: LeftNavigationProps) {
   const navigate                    = useNavigate();

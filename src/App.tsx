@@ -77,7 +77,7 @@ function AppLayout() {
             approvalCount={approvalCount}
             userRole="admin"
             userName="Admin User"
-            userEmail="admin@nexio.com"
+            userEmail="admin@atlas.com"
             onLogout={() => console.log("Logout")}
           />
 

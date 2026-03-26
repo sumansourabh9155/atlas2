@@ -1,10 +1,9 @@
 /**
- * DashboardPage — Nexio Command Centre
+ * DashboardPage — Atlas Command Centre
  *
- * Layout (3 rows):
- *  1. KPI stat cards  — portfolio health at a glance
- *  2. Publication pipeline  |  Needs attention (action items)
- *  3. Activity feed         |  Sites by industry (CSS bar chart)
+ * Layout (2 rows):
+ *  1. Publication pipeline (with KPI stats inside)  |  Needs attention
+ *  2. Activity feed  |  Sites by industry (CSS bar chart)
  *
  * Fully generic — works for any industry vertical.
  * Every widget is actionable, not just informational.
@@ -154,33 +153,7 @@ export function DashboardPage() {
       <div className="p-6 space-y-5">
 
         {/* ══════════════════════════════════════════════════════════════
-            ROW 1 — KPI Stats
-        ══════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-4 gap-4">
-          <StatCard
-            label="Total Sites" value={145} delta="+12 this month" deltaUp={true}
-            icon={Building2} iconBg="bg-blue-50" iconColor="text-blue-600"
-            onClick={() => navigate("/sites/all")}
-          />
-          <StatCard
-            label="Published" value={98} delta="↑ 8 this week" deltaUp={true}
-            icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-600"
-            onClick={() => navigate("/sites/all")}
-          />
-          <StatCard
-            label="Pending Approvals" value={7} delta="3 urgent — act now" deltaUp={false}
-            icon={Clock} iconBg="bg-amber-50" iconColor="text-amber-600"
-            onClick={() => navigate("/approvals")}
-          />
-          <StatCard
-            label="Live Domains" value={43} delta="+5 this month" deltaUp={true}
-            icon={Globe} iconBg="bg-teal-50" iconColor="text-teal-600"
-            onClick={() => navigate("/sites/all")}
-          />
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════
-            ROW 2 — Pipeline + Needs Attention
+            ROW 1 — Pipeline + Needs Attention
         ══════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-3 gap-4">
 
@@ -199,62 +172,68 @@ export function DashboardPage() {
               </button>
             </div>
 
-            {/* Pipeline stages */}
-            <div className="p-6">
-              {/* Stage cards */}
-              <div className="grid grid-cols-4 gap-3 mb-5">
-                {PIPELINE_STAGES.map((stage, i) => (
+            {/* ── Section 1: KPI metric strip ── */}
+            <div className="grid grid-cols-4 divide-x divide-gray-100">
+              {[
+                { label: "Total Sites",       value: 145, delta: "+12 this month", deltaUp: true,  icon: Building2,    iconBg: "bg-blue-50",    iconColor: "text-blue-600",    path: "/sites/all" },
+                { label: "Published",         value: 98,  delta: "+8 this week",   deltaUp: true,  icon: CheckCircle2, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", path: "/sites/all" },
+                { label: "Pending Approvals", value: 7,   delta: "3 urgent",       deltaUp: false, icon: Clock,        iconBg: "bg-amber-50",   iconColor: "text-amber-600",   path: "/approvals" },
+                { label: "Live Domains",      value: 43,  delta: "+5 this month",  deltaUp: true,  icon: Globe,        iconBg: "bg-teal-50",    iconColor: "text-teal-600",    path: "/sites/all" },
+              ].map((m) => {
+                const Icon = m.icon;
+                return (
                   <button
-                    key={stage.id}
-                    onClick={() => navigate("/sites/all")}
-                    className={`${stage.color} rounded-lg p-4 text-left hover:opacity-90 transition-all group relative`}
+                    key={m.label}
+                    onClick={() => navigate(m.path)}
+                    className="px-6 py-5 text-left hover:bg-gray-50 transition-colors group first:rounded-none last:rounded-none"
                   >
-                    <p className={`text-2xl font-bold ${stage.text} tabular-nums`}>{stage.count}</p>
-                    <p className={`text-xs font-medium ${stage.text} mt-1 opacity-80`}>{stage.label}</p>
-                    <p className={`text-xs ${stage.text} opacity-50 mt-0.5`}>{stage.pct}%</p>
-                    {i < PIPELINE_STAGES.length - 1 && (
-                      <ChevronRight
-                        size={14}
-                        className="absolute -right-2 top-1/2 -translate-y-1/2 text-gray-300 z-10"
-                        aria-hidden="true"
-                      />
-                    )}
+                    <div className={`${m.iconBg} w-8 h-8 rounded-lg flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}>
+                      <Icon size={16} className={m.iconColor} aria-hidden="true" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 tabular-nums">{m.value}</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">{m.label}</p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      {m.deltaUp
+                        ? <ArrowUp size={10} className="text-emerald-500 flex-shrink-0" />
+                        : <ArrowDown size={10} className="text-red-400 flex-shrink-0" />}
+                      <span className="text-[11px] text-gray-400">{m.delta}</span>
+                    </div>
                   </button>
+                );
+              })}
+            </div>
+
+            {/* ── Section 2: Stage progress bar ── */}
+            <div className="px-6 py-5 border-t border-gray-100">
+              <div className="flex rounded-full overflow-hidden h-2.5 bg-gray-100 gap-px">
+                {PIPELINE_STAGES.map((stage) => (
+                  <div
+                    key={stage.id}
+                    className={`${stage.bar} transition-all`}
+                    style={{ width: `${stage.pct}%` }}
+                    title={`${stage.label}: ${stage.count} sites (${stage.pct}%)`}
+                  />
                 ))}
               </div>
-
-              {/* Stacked bar showing proportions */}
-              <div>
-                <div className="flex rounded-full overflow-hidden h-2.5 bg-gray-100 gap-px">
-                  {PIPELINE_STAGES.map((stage) => (
-                    <div
-                      key={stage.id}
-                      className={`${stage.bar} transition-all`}
-                      style={{ width: `${stage.pct}%` }}
-                      title={`${stage.label}: ${stage.count} sites (${stage.pct}%)`}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-4 mt-2.5">
-                  {PIPELINE_STAGES.map((stage) => (
-                    <div key={stage.id} className="flex items-center gap-1.5">
-                      <div className={`w-2 h-2 rounded-full ${stage.bar}`} />
-                      <span className="text-xs text-gray-400">{stage.label}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex items-center gap-5 mt-3">
+                {PIPELINE_STAGES.map((stage) => (
+                  <div key={stage.id} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${stage.bar}`} />
+                    <span className="text-xs text-gray-400">{stage.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Quick actions strip */}
-            <div className="px-6 pb-5 grid grid-cols-4 gap-2">
+            {/* ── Section 3: Quick actions ── */}
+            <div className="px-6 py-5 border-t border-gray-100 grid grid-cols-4 gap-3">
               {QUICK_ACTIONS.map((qa) => {
                 const Icon = qa.icon;
                 return (
                   <button
                     key={qa.label}
                     onClick={() => navigate(qa.path)}
-                    className={`${qa.color} flex flex-col items-start gap-1 px-3 py-2.5 rounded-lg text-left transition-colors`}
+                    className={`${qa.color} flex flex-col items-start gap-1.5 px-4 py-3 rounded-xl text-left transition-colors`}
                   >
                     <Icon size={14} aria-hidden="true" />
                     <span className="text-xs font-semibold leading-tight">{qa.label}</span>

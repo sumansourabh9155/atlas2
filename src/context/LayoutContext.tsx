@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-const STORAGE_KEY = "nexio-layout-v1";
+const STORAGE_KEY = "atlas-layout-v1";
 
 interface LayoutContextValue {
   navCollapsed: boolean;

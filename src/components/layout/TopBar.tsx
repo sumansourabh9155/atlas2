@@ -1,10 +1,10 @@
 /**
- * TopBar — Universal top bar for Nexio.
+ * TopBar — Universal top bar for Atlas.
  *
  * Left brand section width is kept in sync with the LeftNavigation width via
  * LayoutContext — both animate together on collapse/expand.
  *
- * Layout: [brand: NX + "Nexio" | border-r] | [page label] | [CTA?]
+ * Layout: [brand: NX + "Atlas" | border-r] | [page label] | [CTA?]
  */
 
 import React from "react";
@@ -44,10 +44,10 @@ export function TopBar({ onCTAClick }: TopBarProps) {
         >
           {/* NX logo mark — always visible */}
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-white text-sm font-bold select-none">NX</span>
+            <span className="text-white text-sm font-bold select-none">AT</span>
           </div>
 
-          {/* "Nexio" wordmark — fades out before the container finishes collapsing */}
+          {/* "Atlas" wordmark — fades out before the container finishes collapsing */}
           <p
             className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out"
             style={{
@@ -56,7 +56,7 @@ export function TopBar({ onCTAClick }: TopBarProps) {
               marginLeft: navCollapsed ? 0  : undefined,
             }}
           >
-            Nexio
+            Atlas
           </p>
         </div>
       </div>
