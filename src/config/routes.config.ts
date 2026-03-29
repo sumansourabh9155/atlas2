@@ -14,6 +14,7 @@ import {
   LayoutDashboard, Building2, Database, Image,
   Megaphone, CheckCircle, Users, Settings, HelpCircle,
   Plus, FolderPlus, MapPin, Upload, ImagePlus, UserPlus, ClipboardList,
+  GitBranch, TrendingDown,
 } from "lucide-react";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -32,7 +33,7 @@ export interface RouteConfig {
   /** Human-readable page label — used in TopBar and nav items */
   label: string;
   /** Which nav section this appears in (omit for hidden routes) */
-  navSection?: "home" | "sites" | "management" | "bottom";
+  navSection?: "home" | "sites" | "analytics" | "management" | "bottom";
   /** Lucide icon for nav item */
   icon?: LucideIcon;
   /** True if this nav item has a collapsible submenu */
@@ -109,6 +110,21 @@ export const ROUTES: RouteConfig[] = [
     cta: { label: "Upload Media", action: "upload-media", icon: Upload },
   },
 
+  // ─── ANALYTICS ───────────────────────────────────────────────────────────
+  {
+    path: "/insights/ab-testing",
+    id: "insights-ab-testing",
+    label: "A/B Testing",
+    navSection: "analytics",
+    icon: GitBranch,
+  },
+  {
+    path: "/insights/funnels",
+    id: "insights-funnels",
+    label: "Funnels",
+    navSection: "analytics",
+    icon: TrendingDown,
+  },
   // ─── MANAGEMENT ──────────────────────────────────────────────────────────
   {
     path: "/banners",
@@ -135,19 +151,19 @@ export const ROUTES: RouteConfig[] = [
     cta: { label: "Invite User", action: "invite-user", icon: UserPlus },
   },
 
-  // ─── BOTTOM ──────────────────────────────────────────────────────────────
+  // ─── SETTINGS / HELP — shown in user profile submenu, not in sidebar nav ─
   {
     path: "/settings",
     id: "settings",
     label: "Settings",
-    navSection: "bottom",
+    hideFromNav: true,
     icon: Settings,
   },
   {
     path: "/help",
     id: "help",
     label: "Get Help",
-    navSection: "bottom",
+    hideFromNav: true,
     icon: HelpCircle,
   },
 

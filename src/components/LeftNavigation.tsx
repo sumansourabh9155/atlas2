@@ -11,12 +11,17 @@
  * Collapse state lives in LayoutContext (persisted to localStorage).
  * Mobile: always full-width drawer, unaffected by collapse state.
  *
- * Toggle button sits at the bottom of the nav, below "Get Help".
+ * User profile sits at the bottom with a sub-menu (Settings, Get Help, Log out):
+ *   - Expanded: click avatar row → accordion slides in above it.
+ *   - Collapsed: hover avatar → flyout panel to the right.
  */
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronDown, ChevronLeft, ChevronRight, Menu, X, LogOut } from "lucide-react";
+import {
+  ChevronDown, ChevronLeft, ChevronRight,
+  Menu, X, LogOut, Settings, HelpCircle,
+} from "lucide-react";
 import {
   ROUTES,
   getNavSection,
@@ -34,6 +39,11 @@ interface FlyoutState {
   children: RouteConfig[];
 }
 
+interface UserFlyoutState {
+  top:  number;
+  left: number;
+}
+
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
 interface LeftNavigationProps {
@@ -47,7 +57,6 @@ interface LeftNavigationProps {
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 
 const S = {
-  // px and gap are intentionally omitted — added per-state to avoid Tailwind conflicts
   itemBase: "w-full flex items-center py-2 rounded-md text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1",
   active:   "bg-teal-50 text-teal-700",
   inactive: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
@@ -67,16 +76,23 @@ export function LeftNavigation({
   const { pathname }                = useLocation();
   const { navCollapsed, toggleNav } = useLayout();
 
-  const [mobileOpen,  setMobileOpen]  = useState(false);
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-  const [flyout,      setFlyout]      = useState<FlyoutState | null>(null);
-  const flyoutTimer                   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [openSubmenu,   setOpenSubmenu]   = useState<string | null>(null);
+  const [userMenuOpen,  setUserMenuOpen]  = useState(false);
+  const [flyout,        setFlyout]        = useState<FlyoutState | null>(null);
+  const [userFlyout,    setUserFlyout]    = useState<UserFlyoutState | null>(null);
 
-  /* ── Close submenu + flyout when collapsing ─────────────────────────── */
+  const flyoutTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userFlyoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const avatarRef       = useRef<HTMLButtonElement | null>(null);
+
+  /* ── Close menus when collapsing ─────────────────────────────────────── */
   useEffect(() => {
     if (navCollapsed) {
       setOpenSubmenu(null);
       setFlyout(null);
+      setUserMenuOpen(false);
+      setUserFlyout(null);
     }
   }, [navCollapsed]);
 
@@ -90,18 +106,29 @@ export function LeftNavigation({
     else if (active?.submenu) setOpenSubmenu(active.id);
   }, [pathname, navCollapsed]);
 
-  /* ── Flyout helpers (hover with grace period) ────────────────────────── */
+  /* ── Nav flyout helpers ──────────────────────────────────────────────── */
   const openFlyout = (state: FlyoutState) => {
     if (flyoutTimer.current) clearTimeout(flyoutTimer.current);
     setFlyout(state);
   };
-
   const closeFlyoutDelayed = () => {
     flyoutTimer.current = setTimeout(() => setFlyout(null), 120);
   };
-
   const keepFlyout = () => {
     if (flyoutTimer.current) clearTimeout(flyoutTimer.current);
+  };
+
+  /* ── User flyout helpers (collapsed mode) ────────────────────────────── */
+  const openUserFlyout = (e: React.MouseEvent) => {
+    if (userFlyoutTimer.current) clearTimeout(userFlyoutTimer.current);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setUserFlyout({ top: rect.top, left: rect.right + 4 });
+  };
+  const closeUserFlyoutDelayed = () => {
+    userFlyoutTimer.current = setTimeout(() => setUserFlyout(null), 120);
+  };
+  const keepUserFlyout = () => {
+    if (userFlyoutTimer.current) clearTimeout(userFlyoutTimer.current);
   };
 
   /* ── Utilities ───────────────────────────────────────────────────────── */
@@ -118,6 +145,8 @@ export function LeftNavigation({
     navigate(path);
     setMobileOpen(false);
     setFlyout(null);
+    setUserFlyout(null);
+    setUserMenuOpen(false);
   };
 
   /* ── NavItem ─────────────────────────────────────────────────────────── */
@@ -202,7 +231,6 @@ export function LeftNavigation({
       >
         {Icon && <Icon size={18} className="flex-shrink-0" aria-hidden="true" />}
 
-        {/* Label only rendered when expanded — avoids ghost gap in flex layout */}
         {!navCollapsed && (
           <span className="flex-1 text-left truncate whitespace-nowrap overflow-hidden">
             {route.label}
@@ -249,28 +277,49 @@ export function LeftNavigation({
     );
   };
 
+  /* ── User sub-menu items (shared between accordion + flyout) ─────────── */
+  const userMenuItems = [
+    {
+      label:   "Settings",
+      icon:    Settings,
+      path:    "/settings",
+      danger:  false,
+      action:  () => go("/settings"),
+    },
+    {
+      label:   "Get Help",
+      icon:    HelpCircle,
+      path:    "/help",
+      danger:  false,
+      action:  () => go("/help"),
+    },
+    {
+      label:   "Log out",
+      icon:    LogOut,
+      path:    null,
+      danger:  true,
+      action:  () => { setUserFlyout(null); setUserMenuOpen(false); onLogout?.(); },
+    },
+  ] as const;
+
   /* ── Shared NavContent ───────────────────────────────────────────────── */
   const NavContent = ({ showToggle = false }: { showToggle?: boolean }) => (
     <div className="flex flex-col h-full">
 
-      {/* Nav items */}
+      {/* Nav sections */}
       <nav
         className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 space-y-3"
         aria-label="Main navigation"
       >
         <Section title="Home"       section="home"       />
         <Section title="Sites"      section="sites"      />
+        <Section title="Analytics"  section="analytics"  />
         <Section title="Management" section="management" />
       </nav>
 
-      {/* Bottom utility links — Settings, Get Help — then collapse toggle */}
-      <div className="shrink-0 border-t border-gray-200 px-2 py-2 space-y-0.5">
-        {getNavSection("bottom").map((r) => (
-          <NavItem key={r.id} route={r} />
-        ))}
-
-        {/* Collapse / expand toggle — positioned below Get Help */}
-        {showToggle && (
+      {/* Collapse toggle */}
+      {showToggle && (
+        <div className="shrink-0 border-t border-gray-200 px-2 py-2">
           <button
             onClick={toggleNav}
             title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
@@ -285,40 +334,79 @@ export function LeftNavigation({
               <span className="flex-1 text-left">Collapse</span>
             )}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* User profile */}
-      <div className="shrink-0 border-t border-gray-200 p-3">
-        <div
-          className={`flex items-center rounded-md hover:bg-gray-100 transition-colors ${
-            navCollapsed ? "justify-center p-2" : "gap-3 px-2 py-2"
-          }`}
-          title={navCollapsed ? `${userName} · ${userRole}` : undefined}
-        >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-sm">
-            <span className="text-white text-xs font-bold select-none">
-              {userName.substring(0, 2).toUpperCase()}
-            </span>
+      {/* ── User profile — bottom anchor with sub-menu ─────────────────── */}
+      <div className="shrink-0 border-t border-gray-200">
+
+        {/* Expanded accordion sub-menu (only in expanded mode) */}
+        {userMenuOpen && !navCollapsed && (
+          <div className="px-3 pt-1.5 pb-2 border-b border-gray-100">
+            {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
+              <button
+                key={label}
+                onClick={action}
+                className={`
+                  w-full flex items-center gap-3 px-2 py-2.5 rounded-md
+                  text-[15px] font-medium
+                  transition-colors duration-150 outline-none
+                  focus-visible:ring-2 focus-visible:ring-teal-500
+                  ${danger
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  }
+                `}
+              >
+                <Icon size={18} strokeWidth={1.75} className="flex-shrink-0" aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            ))}
           </div>
-          <div
-            className="flex flex-1 items-center gap-1 min-w-0 overflow-hidden transition-all duration-200 ease-in-out"
-            style={{ maxWidth: navCollapsed ? 0 : 400, opacity: navCollapsed ? 0 : 1 }}
-            aria-hidden={navCollapsed}
-          >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-              <p className="text-xs text-gray-500 truncate">{userRole}</p>
-            </div>
+        )}
+
+        {/* User row */}
+        <div className="p-3">
+          {navCollapsed ? (
+            /* ── Collapsed: avatar-only, hover → flyout ── */
             <button
-              onClick={(e) => { e.stopPropagation(); onLogout?.(); }}
-              className="p-1.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
-              title="Logout"
-              aria-label="Logout"
+              ref={avatarRef}
+              onMouseEnter={openUserFlyout}
+              onMouseLeave={closeUserFlyoutDelayed}
+              aria-label={`${userName} — open user menu`}
+              title={`${userName} · ${userRole}`}
+              className="w-full flex justify-center p-1 rounded-md hover:bg-gray-100 transition-colors"
             >
-              <LogOut size={16} className="text-gray-500" aria-hidden="true" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold select-none">
+                  {userName.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
             </button>
-          </div>
+          ) : (
+            /* ── Expanded: full row button → toggle accordion ── */
+            <button
+              onClick={() => setUserMenuOpen((v) => !v)}
+              aria-expanded={userMenuOpen}
+              aria-label="Open user menu"
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold select-none">
+                  {userName.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-gray-900 truncate leading-tight">{userName}</p>
+                <p className="text-xs text-gray-500 truncate leading-tight">{userRole}</p>
+              </div>
+              <ChevronDown
+                size={14}
+                aria-hidden="true"
+                className={`flex-shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -342,7 +430,7 @@ export function LeftNavigation({
         <NavContent showToggle />
       </aside>
 
-      {/* ── Flyout panel — fixed so it escapes the aside's overflow clip ─── */}
+      {/* ── Nav flyout panel — fixed so it escapes the aside's overflow clip */}
       {navCollapsed && flyout && (
         <div
           className="hidden md:block fixed z-50"
@@ -351,11 +439,9 @@ export function LeftNavigation({
           onMouseLeave={closeFlyoutDelayed}
         >
           <div className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
-            {/* Section label */}
             <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
               {flyout.label}
             </div>
-            {/* Children */}
             <div className="py-1">
               {flyout.children.map((child) => {
                 const childActive =
@@ -375,6 +461,44 @@ export function LeftNavigation({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── User flyout panel (collapsed mode) ──────────────────────────── */}
+      {navCollapsed && userFlyout && (
+        <div
+          className="hidden md:block fixed z-50"
+          style={{ top: userFlyout.top - 4, left: userFlyout.left }}
+          onMouseEnter={keepUserFlyout}
+          onMouseLeave={closeUserFlyoutDelayed}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-[210px]">
+            {/* User header */}
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+              <p className="text-xs text-gray-500 truncate mt-0.5">{userEmail}</p>
+            </div>
+            {/* Items */}
+            <div className="px-2 py-2">
+              {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-md
+                    text-[15px] font-medium transition-colors duration-150
+                    ${danger
+                      ? "text-red-600 hover:bg-red-50"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    }
+                  `}
+                >
+                  <Icon size={18} strokeWidth={1.75} className="flex-shrink-0" aria-hidden="true" />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

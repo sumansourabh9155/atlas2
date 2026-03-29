@@ -27,6 +27,8 @@ import type { InternalMode }  from "./components/WebsiteEditor/WebsiteEditorSubN
 
 // Pages
 import { DashboardPage }        from "./components/Dashboard/DashboardPage";
+import { ABTestingPage }           from "./components/Insights/ABTestingPage";
+import { ConversionFunnelsPage }   from "./components/Insights/ConversionFunnelsPage";
 import { SiteManagementPage }   from "./components/SiteManagement/SiteManagementPage";
 import { SiteListPage }         from "./components/SiteManagement/SiteListPage";
 import { GroupsPage }           from "./components/SiteManagement/GroupsPage";
@@ -152,7 +154,9 @@ function AppRouter() {
       {/* ── Normal layout ── */}
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard"           element={<DashboardPage />} />
+        <Route path="/dashboard"               element={<DashboardPage />} />
+        <Route path="/insights/ab-testing" element={<ABTestingPage />} />
+        <Route path="/insights/funnels"    element={<ConversionFunnelsPage />} />
         <Route path="/sites"               element={<Navigate to="/sites/all" replace />} />
         <Route path="/sites/all"           element={<SiteListPage />} />
         <Route path="/sites/groups"        element={<GroupsPage />} />
