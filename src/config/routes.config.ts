@@ -174,6 +174,12 @@ export const ROUTES: RouteConfig[] = [
     label: "New Site",
     hideFromNav: true,
   },
+  {
+    path: "/users/invite",
+    id: "invite-user-page",
+    label: "Invite User",
+    hideFromNav: true,
+  },
 ];
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */

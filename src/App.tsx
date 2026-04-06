@@ -38,6 +38,7 @@ import { MediaLibraryPage }     from "./components/MediaLibrary/MediaLibraryPage
 import { BannerManagementPage } from "./components/BannerManagement/BannerManagementPage";
 import { ApprovalFlowPage }     from "./components/ApprovalFlow/ApprovalFlowPage";
 import { UserManagementPage }   from "./components/UserManagement/UserManagementPage";
+import { InviteUserPage }       from "./components/UserManagement/InviteUserPage";
 
 // Site creation 3-step flow
 import { HospitalSetupPage }    from "./components/HospitalSetup/HospitalSetupPage";
@@ -60,10 +61,11 @@ function AppLayout() {
   const handleCTAAction = (action: string) => {
     switch (action) {
       case "new-site":
-        // Navigate to the creation flow, carrying "from" so the back button works
         navigate("/sites/new", { state: { from: window.location.pathname } });
         break;
-      // Other actions are self-contained within their pages for now
+      case "invite-user":
+        navigate("/users/invite");
+        break;
       default:
         console.info("CTA action:", action);
     }
@@ -166,6 +168,7 @@ function AppRouter() {
         <Route path="/banners"             element={<BannerManagementPage />} />
         <Route path="/approvals"           element={<ApprovalFlowPage />} />
         <Route path="/users"               element={<UserManagementPage />} />
+        <Route path="/users/invite"        element={<InviteUserPage />} />
         {/* Catch-all → dashboard */}
         <Route path="*"                    element={<Navigate to="/dashboard" replace />} />
       </Route>
