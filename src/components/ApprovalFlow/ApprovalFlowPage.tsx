@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { CheckCircle, Eye } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { useApproval, ClinicVersionV2 } from "../../context/ApprovalContext";
 import { useNavigate } from "react-router-dom";
 import { ClinicWebsite } from "../../types/clinic";
@@ -391,43 +391,33 @@ export function ApprovalFlowPage() {
                 const v2 = approval as ClinicVersionV2;
                 const feedback = getFeedback(v2.id);
                 return (
-                  <div key={v2.id} className="relative">
-                    <ChangesSummaryCard
-                      clinicName={v2.clinicId}
-                      submittedBy={v2.createdBy}
-                      submittedAt={new Date(v2.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                      changesSummary={v2.changesSummary || []}
-                      feedbackCount={feedback.length}
-                      diffStats={v2.diffStats || { totalChanged: 0, bySection: {}, createdItems: 0, deletedItems: 0 }}
-                      onViewDetails={() => {
-                        setSelectedPendingId(v2.id);
-                        setSelectedSectionKey(v2.changesSummary?.[0]?.sectionKey || "");
-                        setShowDetailModal(true);
-                      }}
-                    />
-                    {/* Review Changes CTA — opens full-screen review flow */}
-                    <div className="absolute top-4 right-4">
-                      <button
-                        onClick={() =>
-                          navigate("/approvals/review", {
-                            state: {
-                              mode: "admin-review",
-                              clinicName: v2.clinicId,
-                              submissionId: v2.id,
-                            },
-                          })
-                        }
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-lg transition-colors"
-                      >
-                        <Eye size={12} aria-hidden="true" />
-                        Review Changes
-                      </button>
-                    </div>
-                  </div>
+                  <ChangesSummaryCard
+                    key={v2.id}
+                    clinicName={v2.clinicId}
+                    submittedBy={v2.createdBy}
+                    submittedAt={new Date(v2.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                    changesSummary={v2.changesSummary || []}
+                    feedbackCount={feedback.length}
+                    diffStats={v2.diffStats || { totalChanged: 0, bySection: {}, createdItems: 0, deletedItems: 0 }}
+                    onViewDetails={() => {
+                      setSelectedPendingId(v2.id);
+                      setSelectedSectionKey(v2.changesSummary?.[0]?.sectionKey || "");
+                      setShowDetailModal(true);
+                    }}
+                    onReviewInEditor={() =>
+                      navigate("/approvals/review", {
+                        state: {
+                          mode: "admin-review",
+                          clinicName: v2.clinicId,
+                          submissionId: v2.id,
+                        },
+                      })
+                    }
+                  />
                 );
               })
             ) : (

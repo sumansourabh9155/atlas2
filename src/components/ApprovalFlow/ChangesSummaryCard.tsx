@@ -21,6 +21,8 @@ interface ChangesSummaryCardProps {
     deletedItems: number;
   };
   onViewDetails: () => void;
+  /** Opens the full-screen review page (editor with field highlights) */
+  onReviewInEditor?: () => void;
 }
 
 export function ChangesSummaryCard({
@@ -31,6 +33,7 @@ export function ChangesSummaryCard({
   feedbackCount,
   diffStats,
   onViewDetails,
+  onReviewInEditor,
 }: ChangesSummaryCardProps) {
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
 
@@ -105,9 +108,9 @@ export function ChangesSummaryCard({
         </div>
 
         {/* Actions Column */}
-        <div className="flex items-center gap-2 ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 ml-4 flex-shrink-0">
           <button
-            onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
+            onClick={(e) => { e.stopPropagation(); setIsBreakdownExpanded(!isBreakdownExpanded); }}
             className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
             title={isBreakdownExpanded ? "Hide change breakdown" : "Show change breakdown"}
             aria-label={isBreakdownExpanded ? "Hide breakdown" : "Show breakdown"}
@@ -120,12 +123,21 @@ export function ChangesSummaryCard({
             )}
           </button>
           <button
-            onClick={onViewDetails}
-            className="px-4 py-2 text-xs font-semibold rounded-md bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label={`Review changes for ${clinicName}`}
+            onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+            aria-label={`View diff for ${clinicName}`}
           >
-            Review Changes
+            View Diff
           </button>
+          {onReviewInEditor && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onReviewInEditor(); }}
+              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+              aria-label={`Review in editor for ${clinicName}`}
+            >
+              Review in Editor
+            </button>
+          )}
         </div>
       </div>
     </div>

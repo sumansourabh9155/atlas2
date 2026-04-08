@@ -286,6 +286,14 @@ export function LeftNavigation({
     );
   };
 
+  /* ── Role-based nav visibility ────────────────────────────────────────── */
+  // Routes each role should NOT see in the sidebar
+  const HIDDEN_BY_ROLE: Record<DemoRole, Set<string>> = {
+    admin:   new Set(["my-submissions"]),                                     // Admin doesn't submit — they approve
+    manager: new Set(["my-submissions"]),                                     // Manager doesn't submit either
+    custom:  new Set(["approval-flow", "user-management"]),                   // Custom can't approve or manage users
+  };
+
   /* ── Section ─────────────────────────────────────────────────────────── */
   const Section = ({
     title,
@@ -294,7 +302,9 @@ export function LeftNavigation({
     title:   string;
     section: RouteConfig["navSection"];
   }) => {
-    const items = getNavSection(section);
+    const hidden = HIDDEN_BY_ROLE[userRole];
+    let items = getNavSection(section);
+    items = items.filter((r) => !hidden.has(r.id));
     if (!items.length) return null;
     return (
       <div className="space-y-0.5">
@@ -341,6 +351,11 @@ export function LeftNavigation({
       action:  () => { setUserFlyout(null); setUserMenuOpen(false); onLogout?.(); },
     },
   ] as const;
+
+  // Custom & Manager users don't see Settings
+  const filteredUserMenuItems = (userRole === "custom" || userRole === "manager")
+    ? userMenuItems.filter((item) => item.path !== "/settings")
+    : userMenuItems;
 
   /* ── Shared NavContent ───────────────────────────────────────────────── */
   const NavContent = ({ showToggle = false }: { showToggle?: boolean }) => (
@@ -414,7 +429,7 @@ export function LeftNavigation({
             <div className="border-t border-gray-100 my-1.5" />
 
             {/* ── Standard items ── */}
-            {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
+            {filteredUserMenuItems.map(({ label, icon: Icon, action, danger }) => (
               <button
                 key={label}
                 onClick={action}
@@ -583,7 +598,7 @@ export function LeftNavigation({
             {/* ── Divider + standard items ── */}
             <div className="border-t border-gray-100 mx-2 mb-1" />
             <div className="px-2 pb-2">
-              {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
+              {filteredUserMenuItems.map(({ label, icon: Icon, action, danger }) => (
                 <button
                   key={label}
                   onClick={action}
