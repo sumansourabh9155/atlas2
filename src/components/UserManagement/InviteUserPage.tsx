@@ -15,7 +15,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Send, Shield, Users, UserCog,
+  Send, Shield, Users, UserCog,
   Check, MapPin, Building2, AlertTriangle, Search,
   ChevronDown,
 } from "lucide-react";
@@ -228,45 +228,6 @@ const toggleLocation = (id: string) => {
   /* ── Render ── */
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 flex flex-col">
-
-      {/* ── Sticky top bar ── */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between flex-shrink-0">
-        <button
-          onClick={() => navigate("/users")}
-          className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to Users
-        </button>
-
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            {firstName || lastName
-              ? <p className="text-sm font-medium text-gray-900">{firstName} {lastName}</p>
-              : <p className="text-sm text-gray-400">Enter name & email below</p>}
-            {role && (
-              <p className="text-xs text-gray-400">
-                {ROLE_META[role].label} · {role === "admin" ? "All locations" : `${locationIds.length} location${locationIds.length !== 1 ? "s" : ""}`}
-              </p>
-            )}
-          </div>
-
-          <button
-            onClick={handleSend}
-            disabled={sending}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {sending ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                Sending…
-              </>
-            ) : (
-              <><Send size={14} aria-hidden="true" /> Send Invitation</>
-            )}
-          </button>
-        </div>
-      </div>
 
       {/* ── Page content ── */}
       <div className="flex-1 px-6 py-6 max-w-6xl mx-auto w-full space-y-5">

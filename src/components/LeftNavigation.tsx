@@ -21,6 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronDown, ChevronLeft, ChevronRight,
   Menu, X, LogOut, Settings, HelpCircle,
+  Shield, Users, UserCog, Check,
 } from "lucide-react";
 import {
   ROUTES,
@@ -46,32 +47,64 @@ interface UserFlyoutState {
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
+type DemoRole = "admin" | "manager" | "custom";
+
 interface LeftNavigationProps {
-  approvalCount?: number;
-  userRole?:      string;
-  userName?:      string;
-  userEmail?:     string;
-  onLogout?:      () => void;
+  approvalCount?:      number;
+  mySubmissionsCount?: number;   // amber badge for custom-role rejected submissions
+  userRole?:           DemoRole;
+  userName?:           string;
+  userEmail?:          string;
+  onLogout?:           () => void;
+  onRoleChange?:       (role: DemoRole) => void;
 }
 
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 
 const S = {
-  itemBase: "w-full flex items-center py-2 rounded-md text-sm font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1",
+  itemBase: "w-full flex items-center py-1.5 rounded-md text-xs font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1",
   active:   "bg-teal-50 text-teal-700",
   inactive: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-  sub:      "w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-teal-500",
+  sub:      "w-full text-left px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-teal-500",
 };
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 
+/* ── Role switcher config ────────────────────────────────────────────────── */
+
+const ROLE_OPTIONS: {
+  id:      DemoRole;
+  label:   string;
+  icon:    React.ElementType;
+  color:   string;   // avatar bg
+  badge:   string;   // pill classes
+}[] = [
+  { id: "admin",   label: "Admin",   icon: Shield,  color: "from-violet-500 to-violet-700", badge: "bg-violet-50 text-violet-700" },
+  { id: "manager", label: "Manager", icon: Users,   color: "from-blue-400   to-blue-600",   badge: "bg-blue-50   text-blue-700"   },
+  { id: "custom",  label: "Custom",  icon: UserCog, color: "from-teal-500   to-teal-700",   badge: "bg-teal-50   text-teal-700"   },
+];
+
+/* ── User lookup (demo personas) ─────────────────────────────────────────── */
+
+const ROLE_PERSONAS: Record<DemoRole, { name: string; email: string; avatarGradient: string }> = {
+  admin:   { name: "Admin User",   email: "admin@atlas.com",   avatarGradient: "from-violet-500 to-violet-700" },
+  manager: { name: "Manager User", email: "manager@atlas.com", avatarGradient: "from-blue-400   to-blue-600"   },
+  custom:  { name: "Custom User",  email: "custom@atlas.com",  avatarGradient: "from-teal-500   to-teal-700"   },
+};
+
 export function LeftNavigation({
-  approvalCount = 0,
-  userRole      = "admin",
-  userName      = "Admin",
-  userEmail     = "admin@atlas.com",
+  approvalCount      = 0,
+  mySubmissionsCount = 0,
+  userRole           = "admin",
+  userName,
+  userEmail,
   onLogout,
+  onRoleChange,
 }: LeftNavigationProps) {
+  // Derive persona from role (props override if explicitly provided)
+  const persona     = ROLE_PERSONAS[userRole];
+  const resolvedName  = userName  ?? persona.name;
+  const resolvedEmail = userEmail ?? persona.email;
   const navigate                    = useNavigate();
   const { pathname }                = useLocation();
   const { navCollapsed, toggleNav } = useLayout();
@@ -151,9 +184,10 @@ export function LeftNavigation({
 
   /* ── NavItem ─────────────────────────────────────────────────────────── */
   const NavItem = ({ route }: { route: RouteConfig }) => {
-    const Icon        = route.icon;
-    const active      = isActive(route);
-    const isApprovals = route.id === "approval-flow";
+    const Icon            = route.icon;
+    const active          = isActive(route);
+    const isApprovals     = route.id === "approval-flow";
+    const isMySubmissions = route.id === "my-submissions";
 
     /* ── Collapsed submenu parent → flyout trigger ── */
     if (route.submenu && navCollapsed) {
@@ -170,7 +204,7 @@ export function LeftNavigation({
           title={route.label}
           className={`${S.itemBase} ${active ? S.active : S.inactive} justify-center`}
         >
-          {Icon && <Icon size={18} className="flex-shrink-0" aria-hidden="true" />}
+          {Icon && <Icon size={15} className="flex-shrink-0" aria-hidden="true" />}
         </button>
       );
     }
@@ -187,19 +221,19 @@ export function LeftNavigation({
               setOpenSubmenu(expanded ? null : route.id);
             }}
             aria-expanded={expanded}
-            className={`${S.itemBase} px-3 gap-3 ${active ? S.active : S.inactive}`}
+            className={`${S.itemBase} px-2.5 gap-2 ${active ? S.active : S.inactive}`}
           >
-            {Icon && <Icon size={18} className="flex-shrink-0" aria-hidden="true" />}
+            {Icon && <Icon size={15} className="flex-shrink-0" aria-hidden="true" />}
             <span className="flex-1 text-left">{route.label}</span>
             <ChevronDown
-              size={16}
+              size={13}
               aria-hidden="true"
               className={`flex-shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
             />
           </button>
 
           {expanded && children.length > 0 && (
-            <div className="mt-1 ml-3 pl-3 border-l-2 border-gray-200 space-y-1">
+            <div className="mt-0.5 ml-3 pl-2.5 border-l-2 border-gray-200 space-y-0.5">
               {children.map((child) => {
                 const childActive =
                   pathname === child.path || pathname.startsWith(child.path + "/");
@@ -227,7 +261,7 @@ export function LeftNavigation({
         aria-current={active ? "page" : undefined}
         title={navCollapsed ? route.label : undefined}
         aria-label={navCollapsed ? route.label : undefined}
-        className={`${S.itemBase} ${active ? S.active : S.inactive} ${navCollapsed ? "justify-center" : "px-3 gap-3"}`}
+        className={`${S.itemBase} ${active ? S.active : S.inactive} ${navCollapsed ? "justify-center" : "px-2.5 gap-2"}`}
       >
         {Icon && <Icon size={18} className="flex-shrink-0" aria-hidden="true" />}
 
@@ -240,6 +274,12 @@ export function LeftNavigation({
         {isApprovals && approvalCount > 0 && !navCollapsed && (
           <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full flex-shrink-0">
             {approvalCount > 99 ? "99+" : approvalCount}
+          </span>
+        )}
+
+        {isMySubmissions && mySubmissionsCount > 0 && !navCollapsed && (
+          <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full flex-shrink-0">
+            {mySubmissionsCount > 99 ? "99+" : mySubmissionsCount}
           </span>
         )}
       </button>
@@ -263,7 +303,7 @@ export function LeftNavigation({
           className="overflow-hidden transition-all duration-200 ease-in-out"
           style={{ maxHeight: navCollapsed ? 0 : 28, opacity: navCollapsed ? 0 : 1 }}
         >
-          <h3 className="px-3 pb-1 pt-2 text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+          <h3 className="px-3 pb-0.5 pt-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
             {title}
           </h3>
         </div>
@@ -308,7 +348,7 @@ export function LeftNavigation({
 
       {/* Nav sections */}
       <nav
-        className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 space-y-3"
+        className="flex-1 overflow-y-auto overscroll-contain px-2 py-2 space-y-1.5"
         aria-label="Main navigation"
       >
         <Section title="Home"       section="home"       />
@@ -343,6 +383,37 @@ export function LeftNavigation({
         {/* Expanded accordion sub-menu (only in expanded mode) */}
         {userMenuOpen && !navCollapsed && (
           <div className="px-3 pt-1.5 pb-2 border-b border-gray-100">
+            {/* ── Role switcher ── */}
+            <p className="px-2 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+              Switch Role
+            </p>
+            {ROLE_OPTIONS.map(({ id, label, icon: RoleIcon }) => {
+              const active = userRole === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => { onRoleChange?.(id); setUserMenuOpen(false); }}
+                  className={`
+                    w-full flex items-center gap-3 px-2 py-2 rounded-md mb-0.5
+                    text-[13px] font-medium transition-colors duration-150 outline-none
+                    focus-visible:ring-2 focus-visible:ring-teal-500
+                    ${active
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    }
+                  `}
+                >
+                  <RoleIcon size={15} strokeWidth={1.75} className="flex-shrink-0 text-gray-500" aria-hidden="true" />
+                  <span className="flex-1 text-left">{label}</span>
+                  {active && <Check size={13} className="text-teal-600 flex-shrink-0" aria-hidden="true" />}
+                </button>
+              );
+            })}
+
+            {/* ── Divider ── */}
+            <div className="border-t border-gray-100 my-1.5" />
+
+            {/* ── Standard items ── */}
             {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
               <button
                 key={label}
@@ -373,13 +444,13 @@ export function LeftNavigation({
               ref={avatarRef}
               onMouseEnter={openUserFlyout}
               onMouseLeave={closeUserFlyoutDelayed}
-              aria-label={`${userName} — open user menu`}
-              title={`${userName} · ${userRole}`}
+              aria-label={`${resolvedName} — open user menu`}
+              title={`${resolvedName} · ${userRole}`}
               className="w-full flex justify-center p-1 rounded-md hover:bg-gray-100 transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-sm">
+              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${persona.avatarGradient} flex-shrink-0 flex items-center justify-center shadow-sm`}>
                 <span className="text-white text-xs font-bold select-none">
-                  {userName.substring(0, 2).toUpperCase()}
+                  {resolvedName.substring(0, 2).toUpperCase()}
                 </span>
               </div>
             </button>
@@ -391,14 +462,14 @@ export function LeftNavigation({
               aria-label="Open user menu"
               className="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors group"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-sm">
+              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${persona.avatarGradient} flex-shrink-0 flex items-center justify-center shadow-sm`}>
                 <span className="text-white text-xs font-bold select-none">
-                  {userName.substring(0, 2).toUpperCase()}
+                  {resolvedName.substring(0, 2).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-gray-900 truncate leading-tight">{userName}</p>
-                <p className="text-xs text-gray-500 truncate leading-tight">{userRole}</p>
+                <p className="text-sm font-medium text-gray-900 truncate leading-tight">{resolvedName}</p>
+                <p className="text-xs text-gray-500 truncate leading-tight capitalize">{userRole}</p>
               </div>
               <ChevronDown
                 size={14}
@@ -477,11 +548,41 @@ export function LeftNavigation({
           <div className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-[210px]">
             {/* User header */}
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-              <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
-              <p className="text-xs text-gray-500 truncate mt-0.5">{userEmail}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{resolvedName}</p>
+              <p className="text-xs text-gray-500 truncate mt-0.5">{resolvedEmail}</p>
             </div>
-            {/* Items */}
-            <div className="px-2 py-2">
+
+            {/* ── Role switcher ── */}
+            <div className="px-2 pt-2 pb-1">
+              <p className="px-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Switch Role
+              </p>
+              {ROLE_OPTIONS.map(({ id, label, icon: RoleIcon }) => {
+                const active = userRole === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => { onRoleChange?.(id); setUserFlyout(null); }}
+                    className={`
+                      w-full flex items-center gap-2.5 px-3 py-2 rounded-md mb-0.5
+                      text-[13px] font-medium transition-colors duration-150
+                      ${active
+                        ? "bg-gray-100 text-gray-900"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      }
+                    `}
+                  >
+                    <RoleIcon size={14} strokeWidth={1.75} className="flex-shrink-0 text-gray-500" aria-hidden="true" />
+                    <span className="flex-1 text-left">{label}</span>
+                    {active && <Check size={12} className="text-teal-600 flex-shrink-0" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Divider + standard items ── */}
+            <div className="border-t border-gray-100 mx-2 mb-1" />
+            <div className="px-2 pb-2">
               {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
                 <button
                   key={label}

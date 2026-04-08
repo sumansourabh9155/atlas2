@@ -44,6 +44,11 @@ export interface RouteConfig {
   cta?: CtaConfig;
   /** True = exists in the router but never rendered in the nav sidebar */
   hideFromNav?: boolean;
+  /**
+   * When set, the TopBar renders a breadcrumb back-button instead of a plain title.
+   * e.g. { label: "Users", path: "/users" } → "← Users  /  Invite User"
+   */
+  backTo?: { label: string; path: string };
 }
 
 /* ── Route Definitions ──────────────────────────────────────────────────── */
@@ -135,6 +140,13 @@ export const ROUTES: RouteConfig[] = [
     cta: { label: "Create Banner", action: "create-banner", icon: ImagePlus },
   },
   {
+    path: "/my-submissions",
+    id: "my-submissions",
+    label: "My Submissions",
+    navSection: "management",
+    icon: ClipboardList,
+  },
+  {
     path: "/approvals",
     id: "approval-flow",
     label: "Approval Flow",
@@ -179,6 +191,22 @@ export const ROUTES: RouteConfig[] = [
     id: "invite-user-page",
     label: "Invite User",
     hideFromNav: true,
+    backTo: { label: "Users", path: "/users" },
+  },
+  // Approval review routes — distraction-free, no nav
+  {
+    path: "/approvals/review",
+    id: "approval-review",
+    label: "Review Changes",
+    hideFromNav: true,
+    backTo: { label: "Approval Flow", path: "/approvals" },
+  },
+  {
+    path: "/my-submissions/revise",
+    id: "my-submissions-revise",
+    label: "Revise Submission",
+    hideFromNav: true,
+    backTo: { label: "My Submissions", path: "/my-submissions" },
   },
 ];
 

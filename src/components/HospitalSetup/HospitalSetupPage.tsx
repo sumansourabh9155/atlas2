@@ -146,9 +146,14 @@ function SectionHeader({
 
 interface HospitalSetupPageProps {
   onNext?: () => void;
+  /**
+   * When true the floating left-panel (section nav + progress) is hidden.
+   * Used by ApprovalReviewPage which renders its own left panel (changes list).
+   */
+  hideLeftPanel?: boolean;
 }
 
-export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
+export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSetupPageProps) {
   const {
     clinic,
     updateGeneral,
@@ -298,16 +303,23 @@ export function HospitalSetupPage({ onNext }: HospitalSetupPageProps) {
   return (
     <div className="relative h-screen overflow-hidden bg-gray-100 flex font-sans antialiased">
 
-      {/* ── Left spacer — reserves floating panel footprint ── */}
-      <div className="shrink-0" style={{ width: 284 }} aria-hidden="true" />
+      {/* ── Left spacer — reserves floating panel footprint (hidden in review mode) ── */}
+      {!hideLeftPanel && (
+        <div className="shrink-0" style={{ width: 284 }} aria-hidden="true" />
+      )}
 
-      {/* ── Floating Left Panel ── */}
+      {/* ── Floating Left Panel (hidden when parent provides its own panel) ── */}
       <aside
-        className="absolute left-3 top-3 bottom-16 z-30 w-[260px] rounded-2xl overflow-hidden bg-white flex flex-col"
-        style={{
-          boxShadow:
-            "0 4px 6px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.11), 0 0 0 1px rgba(0,0,0,0.05)",
-        }}
+        className={
+          hideLeftPanel
+            ? "hidden"
+            : "absolute left-3 top-3 bottom-16 z-30 w-[260px] rounded-2xl overflow-hidden bg-white flex flex-col"
+        }
+        style={
+          hideLeftPanel
+            ? undefined
+            : { boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.11), 0 0 0 1px rgba(0,0,0,0.05)" }
+        }
         aria-label="Setup navigation"
       >
         {/* Clinic identity */}

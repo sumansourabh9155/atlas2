@@ -10,7 +10,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search, Edit2, Trash2, Shield, Users, UserCog,
-  UserPlus, Mail, CheckCircle2, Clock,
+  Mail, CheckCircle2, Clock,
 } from "lucide-react";
 import { InviteUserModal } from "./InviteUserModal";
 
@@ -61,7 +61,7 @@ const STATUS_META: Record<UserStatus, { icon: React.ElementType; badge: string; 
 
 export function UserManagementPage() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // used for invite redirect on TopBar CTA
 
   const [searchQuery,   setSearchQuery]   = useState("");
   const [roleFilter,    setRoleFilter]    = useState<UserRole | "all">("all");
@@ -117,28 +117,11 @@ export function UserManagementPage() {
         </div>
       )}
 
-      {/* Page header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-base font-semibold text-gray-900">User Management</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {users.length} users · {users.filter((u) => u.status === "active").length} active
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/users/invite")}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
-        >
-          <UserPlus size={15} aria-hidden="true" />
-          Invite User
-        </button>
-      </div>
-
       <div className="p-6 space-y-4">
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[220px] max-w-sm">
+          <div className="relative min-w-[240px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
             <input
               type="text"
@@ -153,10 +136,10 @@ export function UserManagementPage() {
               <button
                 key={r}
                 onClick={() => setRoleFilter(r)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
                   roleFilter === r
-                    ? "bg-teal-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
+                    ? "bg-teal-600 text-white border-teal-600"
+                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
                 }`}
               >
                 {r === "all" ? "All" : ROLE_META[r].label} ({counts[r]})
@@ -165,95 +148,108 @@ export function UserManagementPage() {
           </div>
         </div>
 
-        {/* User table */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_1fr_120px_110px_80px_56px] items-center px-5 py-3 bg-gray-50 border-b border-gray-100">
-            {["User", "Email", "Role", "Status", "Locations", ""].map((h) => (
-              <span key={h} className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{h}</span>
-            ))}
-          </div>
+        {/* User table — matches platform table pattern */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[260px]">User</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">Email</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[120px]">Role</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[110px]">Status</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[90px]">Locations</th>
+                <th className="px-5 py-3 w-[64px]" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-16 text-center">
+                    <Users size={32} className="text-gray-200 mx-auto mb-3" aria-hidden="true" />
+                    <p className="text-sm text-gray-500 font-medium">No users found</p>
+                    <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filter</p>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((user, idx) => {
+                  const rm = ROLE_META[user.role];
+                  const sm = STATUS_META[user.status];
+                  const RI = rm.icon;
+                  const SI = sm.icon;
+                  return (
+                    <tr
+                      key={user.id}
+                      className={`border-b border-gray-100 last:border-0 hover:bg-gray-50/70 transition-colors group ${
+                        idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                      }`}
+                    >
+                      {/* Avatar + Name */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${user.avatarColor} flex-shrink-0 flex items-center justify-center shadow-sm`}>
+                            <span className="text-white text-[11px] font-bold select-none">{user.initials}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                            <p className="text-[11px] text-gray-400">Joined {user.joinedAt}</p>
+                          </div>
+                        </div>
+                      </td>
 
-          {/* Rows */}
-          {filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <Users size={32} className="text-gray-200 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-sm text-gray-500 font-medium">No users found</p>
-              <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filter</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {filtered.map((user) => {
-                const rm = ROLE_META[user.role];
-                const sm = STATUS_META[user.status];
-                const RI = rm.icon;
-                const SI = sm.icon;
-                return (
-                  <div
-                    key={user.id}
-                    className="grid grid-cols-[1fr_1fr_120px_110px_80px_56px] items-center px-5 py-3.5 hover:bg-gray-50 transition-colors group"
-                  >
-                    {/* Avatar + Name */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${user.avatarColor} flex-shrink-0 flex items-center justify-center shadow-sm`}>
-                        <span className="text-white text-[11px] font-bold select-none">{user.initials}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                        <p className="text-[11px] text-gray-400">Joined {user.joinedAt}</p>
-                      </div>
-                    </div>
+                      {/* Email */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Mail size={12} className="text-gray-300 flex-shrink-0" aria-hidden="true" />
+                          <span className="text-xs text-gray-500 truncate">{user.email}</span>
+                        </div>
+                      </td>
 
-                    {/* Email */}
-                    <div className="flex items-center gap-1.5 min-w-0 pr-4">
-                      <Mail size={12} className="text-gray-300 flex-shrink-0" aria-hidden="true" />
-                      <span className="text-xs text-gray-500 truncate">{user.email}</span>
-                    </div>
+                      {/* Role */}
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${rm.badge}`}>
+                          <RI size={11} aria-hidden="true" /> {rm.label}
+                        </span>
+                      </td>
 
-                    {/* Role */}
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${rm.badge}`}>
-                      <RI size={11} aria-hidden="true" /> {rm.label}
-                    </span>
+                      {/* Status */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <SI size={13} className={sm.badge} aria-hidden="true" />
+                          <span className={`text-xs font-medium ${sm.badge}`}>{sm.label}</span>
+                        </div>
+                      </td>
 
-                    {/* Status */}
-                    <div className="flex items-center gap-1.5">
-                      <SI size={13} className={sm.badge} aria-hidden="true" />
-                      <span className={`text-xs font-medium ${sm.badge}`}>{sm.label}</span>
-                    </div>
+                      {/* Locations */}
+                      <td className="px-5 py-3.5">
+                        <span className="text-xs text-gray-500">
+                          {user.role === "admin" ? "All" : user.locations}
+                        </span>
+                      </td>
 
-                    {/* Locations */}
-                    <span className="text-xs text-gray-500">
-                      {user.role === "admin" ? "All" : user.locations}
-                    </span>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 hover:bg-gray-100 rounded-md transition-colors" title="Edit" aria-label="Edit user">
-                        <Edit2 size={14} className="text-gray-500" aria-hidden="true" />
-                      </button>
-                      <button className="p-1.5 hover:bg-red-50 rounded-md transition-colors" title="Remove" aria-label="Remove user">
-                        <Trash2 size={14} className="text-red-400" aria-hidden="true" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      {/* Actions */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-1.5 hover:bg-gray-100 rounded-md transition-colors" title="Edit" aria-label="Edit user">
+                            <Edit2 size={13} className="text-gray-400" aria-hidden="true" />
+                          </button>
+                          <button className="p-1.5 hover:bg-red-50 rounded-md transition-colors" title="Remove" aria-label="Remove user">
+                            <Trash2 size={13} className="text-red-400" aria-hidden="true" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* Role legend */}
-        <div className="flex items-center gap-6 px-1">
-          {(["admin", "manager", "custom"] as const).map((role) => {
-            const { icon: Icon, label } = ROLE_META[role];
-            return (
-              <div key={role} className="flex items-center gap-1.5">
-                <Icon size={12} className="text-gray-400" aria-hidden="true" />
-                <span className="text-xs text-gray-400">{label} — {counts[role]}</span>
-              </div>
-            );
-          })}
-        </div>
+        {/* Summary row */}
+        <p className="text-xs text-gray-400 px-1">
+          {filtered.length} of {users.length} users
+          {roleFilter !== "all" && ` · filtered by ${ROLE_META[roleFilter].label}`}
+        </p>
 
       </div>
 

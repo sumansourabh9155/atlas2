@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Link2, RefreshCw, CheckCircle2, AlertCircle,
-  Palette, Image, Type, FileText,
+  Palette, Image, Type,
 } from "lucide-react";
 import { FormField } from "../ui/FormField";
 import type { ClinicGeneralDetails, HospitalType } from "../../../types/clinic";
+import { useReviewMode } from "../../../context/ReviewModeContext";
 
 // ─── Slug helpers ─────────────────────────────────────────────────────────────
 
@@ -269,6 +270,40 @@ function ColorPickerField({
   );
 }
 
+// ─── FieldReviewHint ──────────────────────────────────────────────────────────
+// Shows an inline hint below a field when it is in review mode (rejected/pending).
+
+function FieldReviewHint({ path }: { path: string }) {
+  const { getFieldStatus, getFieldFeedback, mode } = useReviewMode();
+  const status   = getFieldStatus(path);
+  const feedback = getFieldFeedback(path);
+
+  if (!status) return null;
+
+  if (status === "rejected") {
+    return (
+      <div className="mt-1.5 flex items-start gap-1.5">
+        <AlertCircle size={11} className="text-red-500 shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <p className="text-xs font-medium text-red-600">Revision requested</p>
+          {feedback && <p className="text-[11px] text-red-500 mt-0.5 leading-snug">{feedback}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "pending" && mode === "admin-review") {
+    return (
+      <p className="mt-1 text-[11px] text-amber-600 flex items-center gap-1">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+        Changed — pending review
+      </p>
+    );
+  }
+
+  return null;
+}
+
 // ─── BasicInfoSection ─────────────────────────────────────────────────────────
 
 export interface BasicInfoData {
@@ -286,6 +321,7 @@ interface Props {
 
 export function BasicInfoSection({ data, onChange }: Props) {
   const { general, hospitalType } = data;
+  const reviewMode = useReviewMode();
 
   function setGeneral(updates: Partial<BasicInfoData["general"]>) {
     onChange({ general: { ...general, ...updates } });
@@ -311,10 +347,11 @@ export function BasicInfoSection({ data, onChange }: Props) {
             type="text"
             value={general.name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className={INPUT}
+            className={`${INPUT} ${reviewMode.getFieldHighlightClass("general.name")}`}
             placeholder="e.g. Luminary Salon & Spa"
             autoComplete="organization"
           />
+          <FieldReviewHint path="general.name" />
         </FormField>
 
         {/* Auto-slug */}
@@ -359,13 +396,14 @@ export function BasicInfoSection({ data, onChange }: Props) {
               value={general.tagline ?? ""}
               onChange={(e) => setGeneral({ tagline: e.target.value })}
               maxLength={160}
-              className={`${INPUT} pr-14`}
+              className={`${INPUT} pr-14 ${reviewMode.getFieldHighlightClass("general.tagline")}`}
               placeholder="e.g. Excellence in every service, every visit."
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 pointer-events-none">
               {(general.tagline ?? "").length}/160
             </span>
           </div>
+          <FieldReviewHint path="general.tagline" />
         </FormField>
 
         <FormField
@@ -382,13 +420,14 @@ export function BasicInfoSection({ data, onChange }: Props) {
               onChange={(e) => setGeneral({ metaDescription: e.target.value })}
               rows={3}
               maxLength={320}
-              className={`${INPUT} h-auto py-2 resize-none`}
+              className={`${INPUT} h-auto py-2 resize-none ${reviewMode.getFieldHighlightClass("general.metaDescription")}`}
               placeholder="e.g. We offer premium services with expert professionals..."
             />
             <span className="absolute bottom-2 right-3 text-xs text-gray-400 pointer-events-none">
               {(general.metaDescription ?? "").length}/320
             </span>
           </div>
+          <FieldReviewHint path="general.metaDescription" />
         </FormField>
       </SectionCard>
 
@@ -410,9 +449,10 @@ export function BasicInfoSection({ data, onChange }: Props) {
             type="url"
             value={general.logoUrl ?? ""}
             onChange={(e) => setGeneral({ logoUrl: e.target.value })}
-            className={INPUT}
+            className={`${INPUT} ${reviewMode.getFieldHighlightClass("general.logoUrl")}`}
             placeholder="https://cdn.example.com/logo.svg"
           />
+          <FieldReviewHint path="general.logoUrl" />
         </FormField>
 
         {/* Live logo preview */}

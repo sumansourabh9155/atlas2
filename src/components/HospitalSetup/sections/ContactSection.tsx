@@ -1,6 +1,40 @@
-import { MapPin, Phone, Mail, Globe } from "lucide-react";
+import { MapPin, Phone, Mail, Globe, AlertCircle } from "lucide-react";
 import { FormField } from "../ui/FormField";
 import type { ClinicContactCtx } from "../../../context/ClinicContext";
+import { useReviewMode } from "../../../context/ReviewModeContext";
+
+/* ─── FieldReviewHint ─────────────────────────────────────────────────────── */
+
+function FieldReviewHint({ path }: { path: string }) {
+  const { getFieldStatus, getFieldFeedback, mode } = useReviewMode();
+  const status   = getFieldStatus(path);
+  const feedback = getFieldFeedback(path);
+
+  if (!status) return null;
+
+  if (status === "rejected") {
+    return (
+      <div className="mt-1.5 flex items-start gap-1.5">
+        <AlertCircle size={11} className="text-red-500 shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <p className="text-xs font-medium text-red-600">Revision requested</p>
+          {feedback && <p className="text-[11px] text-red-500 mt-0.5 leading-snug">{feedback}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "pending" && mode === "admin-review") {
+    return (
+      <p className="mt-1 text-[11px] text-amber-600 flex items-center gap-1">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+        Changed — pending review
+      </p>
+    );
+  }
+
+  return null;
+}
 
 const INPUT =
   "w-full h-9 px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg " +
@@ -47,6 +81,7 @@ interface Props {
 
 export function ContactSection({ data, onChange }: Props) {
   const { address } = data;
+  const reviewMode  = useReviewMode();
 
   function setAddress(updates: Partial<typeof address>) {
     onChange({ address: { ...address, ...updates } });
@@ -67,10 +102,11 @@ export function ContactSection({ data, onChange }: Props) {
             type="text"
             value={address.street}
             onChange={(e) => setAddress({ street: e.target.value })}
-            className={INPUT}
+            className={`${INPUT} ${reviewMode.getFieldHighlightClass("contact.address.street")}`}
             placeholder="4820 Burnet Road"
             autoComplete="street-address"
           />
+          <FieldReviewHint path="contact.address.street" />
         </FormField>
 
         <FormField label="Suite / Unit" htmlFor="street2" optional>
@@ -191,11 +227,12 @@ export function ContactSection({ data, onChange }: Props) {
               type="tel"
               value={data.phone}
               onChange={(e) => onChange({ phone: e.target.value })}
-              className={`${INPUT} pl-8`}
+              className={`${INPUT} pl-8 ${reviewMode.getFieldHighlightClass("contact.phone")}`}
               placeholder="+1 (512) 555-0182"
               autoComplete="tel"
             />
           </div>
+          <FieldReviewHint path="contact.phone" />
         </FormField>
 
         <FormField
@@ -217,11 +254,12 @@ export function ContactSection({ data, onChange }: Props) {
               onChange={(e) =>
                 onChange({ emergencyPhone: e.target.value || undefined })
               }
-              className={`${INPUT} pl-8`}
+              className={`${INPUT} pl-8 ${reviewMode.getFieldHighlightClass("contact.emergencyPhone")}`}
               placeholder="+1 (512) 555-0199"
               autoComplete="tel"
             />
           </div>
+          <FieldReviewHint path="contact.emergencyPhone" />
         </FormField>
 
         <FormField label="Email Address" htmlFor="email" required>
@@ -236,11 +274,12 @@ export function ContactSection({ data, onChange }: Props) {
               type="email"
               value={data.email}
               onChange={(e) => onChange({ email: e.target.value })}
-              className={`${INPUT} pl-8`}
+              className={`${INPUT} pl-8 ${reviewMode.getFieldHighlightClass("contact.email")}`}
               placeholder="care@yourClinic.vet"
               autoComplete="email"
             />
           </div>
+          <FieldReviewHint path="contact.email" />
         </FormField>
 
         <FormField

@@ -22,6 +22,16 @@ interface WebsiteEditorSubNavProps {
   onBack?: () => void;
   /** Label shown next to the back arrow, e.g. "Clinic List" */
   backLabel?: string;
+  /**
+   * Approval mode — when true the "Publish" button is replaced with
+   * "Submit for Review" / "Awaiting Review" / "Revise & Resubmit"
+   * depending on submissionStatus. Used for Custom-role users.
+   */
+  approvalMode?: boolean;
+  /** Current submission state (only used when approvalMode=true) */
+  submissionStatus?: "idle" | "pending" | "rejected";
+  /** Called instead of onPublish when approvalMode=true and status is idle/rejected */
+  onSubmitForReview?: () => void;
 }
 
 const STEPS: { id: InternalMode; label: string }[] = [
@@ -39,6 +49,9 @@ export function WebsiteEditorSubNav({
   isPublished,
   onBack,
   backLabel,
+  approvalMode = false,
+  submissionStatus = "idle",
+  onSubmitForReview,
 }: WebsiteEditorSubNavProps) {
 
   const NEXT_STEP: Partial<Record<InternalMode, InternalMode>> = {
@@ -166,26 +179,78 @@ export function WebsiteEditorSubNav({
           </button>
         )}
 
-        {/* Publish (step 3 only) */}
+        {/* Publish OR Submit for Review (step 3 only) */}
         {internalMode === "domain" && (
-          <button
-            type="button"
-            onClick={onPublish}
-            disabled={isPublished}
-            className={[
-              "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-              isPublished
-                ? "bg-emerald-600 cursor-default focus-visible:ring-emerald-600"
-                : "bg-teal-600 hover:bg-teal-700 focus-visible:ring-teal-600",
-            ].join(" ")}
-          >
-            {isPublished ? (
-              <><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</>
-            ) : (
-              <><Globe className="w-3.5 h-3.5" aria-hidden="true" /> Publish Site</>
-            )}
-          </button>
+          approvalMode ? (
+            /* ── Custom-user approval mode ── */
+            <>
+              {/* Contextual status pill next to Save */}
+              {submissionStatus === "pending" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
+                  Under admin review
+                </span>
+              )}
+              {submissionStatus === "rejected" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border bg-red-50 text-red-700 border-red-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" aria-hidden="true" />
+                  Revision Requested
+                </span>
+              )}
+
+              {/* Submit / Awaiting / Revise button */}
+              {submissionStatus === "idle" && (
+                <button
+                  type="button"
+                  onClick={onSubmitForReview}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
+                >
+                  <Globe className="w-3.5 h-3.5" aria-hidden="true" />
+                  Submit for Review
+                </button>
+              )}
+              {submissionStatus === "pending" && (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-amber-400 cursor-not-allowed opacity-70 rounded-md"
+                >
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                  Awaiting Review
+                </button>
+              )}
+              {submissionStatus === "rejected" && (
+                <button
+                  type="button"
+                  onClick={onSubmitForReview}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+                >
+                  <Globe className="w-3.5 h-3.5" aria-hidden="true" />
+                  Revise &amp; Resubmit
+                </button>
+              )}
+            </>
+          ) : (
+            /* ── Standard admin/manager publish button ── */
+            <button
+              type="button"
+              onClick={onPublish}
+              disabled={isPublished}
+              className={[
+                "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-md transition-colors",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+                isPublished
+                  ? "bg-emerald-600 cursor-default focus-visible:ring-emerald-600"
+                  : "bg-teal-600 hover:bg-teal-700 focus-visible:ring-teal-600",
+              ].join(" ")}
+            >
+              {isPublished ? (
+                <><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</>
+              ) : (
+                <><Globe className="w-3.5 h-3.5" aria-hidden="true" /> Publish Site</>
+              )}
+            </button>
+          )
         )}
       </div>
     </div>

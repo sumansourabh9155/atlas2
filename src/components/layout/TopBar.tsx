@@ -4,11 +4,14 @@
  * Left brand section width is kept in sync with the LeftNavigation width via
  * LayoutContext — both animate together on collapse/expand.
  *
- * Layout: [brand: NX + "Atlas" | border-r] | [page label] | [CTA?]
+ * Content area layout:
+ *  - Sub-page (route.backTo set):  [← Label / Page Title]  |  [CTA?]
+ *  - Top-level page:               [Icon?  Page Title]       |  [CTA?]
  */
 
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { findRouteByPath } from "../../config/routes.config";
 import { useLayout } from "../../context/LayoutContext";
 
@@ -18,12 +21,15 @@ interface TopBarProps {
 }
 
 export function TopBar({ onCTAClick }: TopBarProps) {
-  const { pathname }              = useLocation();
-  const { navCollapsed }          = useLayout();
-  const route                     = findRouteByPath(pathname);
+  const { pathname }     = useLocation();
+  const navigate         = useNavigate();
+  const { navCollapsed } = useLayout();
+  const route            = findRouteByPath(pathname);
 
   const pageLabel = route?.label ?? "";
   const cta       = route?.cta;
+  const backTo    = route?.backTo;
+  const RouteIcon = route?.icon;
 
   return (
     <div className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center z-50 overflow-hidden">
@@ -63,8 +69,33 @@ export function TopBar({ onCTAClick }: TopBarProps) {
 
       {/* ── Page label + CTA ── */}
       <div className="flex flex-1 items-center justify-between px-6 gap-4 min-w-0">
-        <h1 className="text-sm font-semibold text-gray-900 truncate">{pageLabel}</h1>
 
+        {/* Left: breadcrumb (sub-page) OR icon+title (top-level) */}
+        {backTo ? (
+          /* Sub-page breadcrumb: ← Users / Invite User */
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate(backTo.path)}
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors group"
+            >
+              <ArrowLeft size={13} className="flex-shrink-0 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+              <span className="font-medium">{backTo.label}</span>
+            </button>
+            <span className="text-gray-200 select-none">/</span>
+            <span className="text-sm font-semibold text-gray-900 truncate">{pageLabel}</span>
+          </div>
+        ) : (
+          /* Top-level: optional icon + page title */
+          <div className="flex items-center gap-2 min-w-0">
+            {RouteIcon && (
+              <RouteIcon size={15} className="text-gray-400 flex-shrink-0" aria-hidden="true" />
+            )}
+            <h1 className="text-sm font-semibold text-gray-900 truncate">{pageLabel}</h1>
+          </div>
+        )}
+
+        {/* Right: CTA button */}
         {cta && (
           <button
             type="button"
