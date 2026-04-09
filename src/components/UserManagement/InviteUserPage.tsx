@@ -168,7 +168,9 @@ function displayValue(val: string[] | boolean | undefined): string {
 }
 
 
-const INPUT = "w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white";
+import { input as inputTokens } from "../../lib/styles/tokens";
+
+const INPUT = inputTokens.base;
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
 

@@ -36,12 +36,10 @@ function FieldReviewHint({ path }: { path: string }) {
   return null;
 }
 
-const INPUT =
-  "w-full h-9 px-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg " +
-  "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 " +
-  "focus:border-teal-500 transition-colors";
+import { input as inputTokens, surface } from "../../../lib/styles/tokens";
 
-const CARD = "bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5";
+const INPUT = inputTokens.base;
+const CARD  = surface.section;
 
 function SectionCard({
   icon: Icon,

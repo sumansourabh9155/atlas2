@@ -11,7 +11,7 @@
  * Collapse state lives in LayoutContext (persisted to localStorage).
  * Mobile: always full-width drawer, unaffected by collapse state.
  *
- * User profile sits at the bottom with a sub-menu (Settings, Get Help, Log out):
+ * User profile sits at the bottom with a sub-menu (role switcher, Log out):
  *   - Expanded: click avatar row → accordion slides in above it.
  *   - Collapsed: hover avatar → flyout panel to the right.
  */
@@ -20,7 +20,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronDown, ChevronLeft, ChevronRight,
-  Menu, X, LogOut, Settings, HelpCircle,
+  Menu, X, LogOut,
   Shield, Users, UserCog, Check,
 } from "lucide-react";
 import {
@@ -111,20 +111,18 @@ export function LeftNavigation({
 
   const [mobileOpen,    setMobileOpen]    = useState(false);
   const [openSubmenu,   setOpenSubmenu]   = useState<string | null>(null);
-  const [userMenuOpen,  setUserMenuOpen]  = useState(false);
   const [flyout,        setFlyout]        = useState<FlyoutState | null>(null);
   const [userFlyout,    setUserFlyout]    = useState<UserFlyoutState | null>(null);
 
   const flyoutTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userFlyoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const avatarRef       = useRef<HTMLButtonElement | null>(null);
+  const avatarRef       = useRef<HTMLDivElement | null>(null);
 
   /* ── Close menus when collapsing ─────────────────────────────────────── */
   useEffect(() => {
     if (navCollapsed) {
       setOpenSubmenu(null);
       setFlyout(null);
-      setUserMenuOpen(false);
       setUserFlyout(null);
     }
   }, [navCollapsed]);
@@ -151,11 +149,10 @@ export function LeftNavigation({
     if (flyoutTimer.current) clearTimeout(flyoutTimer.current);
   };
 
-  /* ── User flyout helpers (collapsed mode) ────────────────────────────── */
-  const openUserFlyout = (e: React.MouseEvent) => {
+  /* ── User flyout helpers (hover dropdown) ────────────────────────────── */
+  const openUserFlyout = () => {
     if (userFlyoutTimer.current) clearTimeout(userFlyoutTimer.current);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setUserFlyout({ top: rect.top, left: rect.right + 4 });
+    setUserFlyout({ top: 0, left: 0 });   // position is computed in CSS (bottom + left)
   };
   const closeUserFlyoutDelayed = () => {
     userFlyoutTimer.current = setTimeout(() => setUserFlyout(null), 120);
@@ -179,7 +176,6 @@ export function LeftNavigation({
     setMobileOpen(false);
     setFlyout(null);
     setUserFlyout(null);
-    setUserMenuOpen(false);
   };
 
   /* ── NavItem ─────────────────────────────────────────────────────────── */
@@ -290,8 +286,8 @@ export function LeftNavigation({
   // Routes each role should NOT see in the sidebar
   const HIDDEN_BY_ROLE: Record<DemoRole, Set<string>> = {
     admin:   new Set(["my-submissions"]),                                     // Admin doesn't submit — they approve
-    manager: new Set(["my-submissions"]),                                     // Manager doesn't submit either
-    custom:  new Set(["approval-flow", "user-management"]),                   // Custom can't approve or manage users
+    manager: new Set(["my-submissions", "settings"]),                         // Manager doesn't submit; no settings access
+    custom:  new Set(["approval-flow", "user-management", "settings"]),       // Custom can't approve, manage users, or settings
   };
 
   /* ── Section ─────────────────────────────────────────────────────────── */
@@ -327,35 +323,16 @@ export function LeftNavigation({
     );
   };
 
-  /* ── User sub-menu items (shared between accordion + flyout) ─────────── */
+  /* ── User sub-menu items ──────────────────────────────────────────────── */
   const userMenuItems = [
-    {
-      label:   "Settings",
-      icon:    Settings,
-      path:    "/settings",
-      danger:  false,
-      action:  () => go("/settings"),
-    },
-    {
-      label:   "Get Help",
-      icon:    HelpCircle,
-      path:    "/help",
-      danger:  false,
-      action:  () => go("/help"),
-    },
     {
       label:   "Log out",
       icon:    LogOut,
       path:    null,
       danger:  true,
-      action:  () => { setUserFlyout(null); setUserMenuOpen(false); onLogout?.(); },
+      action:  () => { setUserFlyout(null); onLogout?.(); },
     },
   ] as const;
-
-  // Custom & Manager users don't see Settings
-  const filteredUserMenuItems = (userRole === "custom" || userRole === "manager")
-    ? userMenuItems.filter((item) => item.path !== "/settings")
-    : userMenuItems;
 
   /* ── Shared NavContent ───────────────────────────────────────────────── */
   const NavContent = ({ showToggle = false }: { showToggle?: boolean }) => (
@@ -370,6 +347,7 @@ export function LeftNavigation({
         <Section title="Sites"      section="sites"      />
         <Section title="Analytics"  section="analytics"  />
         <Section title="Management" section="management" />
+        <Section title="Support"    section="support"    />
       </nav>
 
       {/* Collapse toggle */}
@@ -392,90 +370,32 @@ export function LeftNavigation({
         </div>
       )}
 
-      {/* ── User profile — bottom anchor with sub-menu ─────────────────── */}
-      <div className="shrink-0 border-t border-gray-200">
-
-        {/* Expanded accordion sub-menu (only in expanded mode) */}
-        {userMenuOpen && !navCollapsed && (
-          <div className="px-3 pt-1.5 pb-2 border-b border-gray-100">
-            {/* ── Role switcher ── */}
-            <p className="px-2 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              Switch Role
-            </p>
-            {ROLE_OPTIONS.map(({ id, label, icon: RoleIcon }) => {
-              const active = userRole === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => { onRoleChange?.(id); setUserMenuOpen(false); }}
-                  className={`
-                    w-full flex items-center gap-3 px-2 py-2 rounded-md mb-0.5
-                    text-[13px] font-medium transition-colors duration-150 outline-none
-                    focus-visible:ring-2 focus-visible:ring-teal-500
-                    ${active
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    }
-                  `}
-                >
-                  <RoleIcon size={15} strokeWidth={1.75} className="flex-shrink-0 text-gray-500" aria-hidden="true" />
-                  <span className="flex-1 text-left">{label}</span>
-                  {active && <Check size={13} className="text-teal-600 flex-shrink-0" aria-hidden="true" />}
-                </button>
-              );
-            })}
-
-            {/* ── Divider ── */}
-            <div className="border-t border-gray-100 my-1.5" />
-
-            {/* ── Standard items ── */}
-            {filteredUserMenuItems.map(({ label, icon: Icon, action, danger }) => (
-              <button
-                key={label}
-                onClick={action}
-                className={`
-                  w-full flex items-center gap-3 px-2 py-2.5 rounded-md
-                  text-[15px] font-medium
-                  transition-colors duration-150 outline-none
-                  focus-visible:ring-2 focus-visible:ring-teal-500
-                  ${danger
-                    ? "text-red-600 hover:bg-red-50"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                  }
-                `}
-              >
-                <Icon size={18} strokeWidth={1.75} className="flex-shrink-0" aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* User row */}
+      {/* ── User profile — hover triggers floating dropdown ─────────────── */}
+      <div
+        className="shrink-0 border-t border-gray-200"
+        onMouseEnter={openUserFlyout}
+        onMouseLeave={closeUserFlyoutDelayed}
+      >
         <div className="p-3">
           {navCollapsed ? (
-            /* ── Collapsed: avatar-only, hover → flyout ── */
-            <button
+            /* ── Collapsed: avatar-only ── */
+            <div
               ref={avatarRef}
-              onMouseEnter={openUserFlyout}
-              onMouseLeave={closeUserFlyoutDelayed}
               aria-label={`${resolvedName} — open user menu`}
-              title={`${resolvedName} · ${userRole}`}
-              className="w-full flex justify-center p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="w-full flex justify-center p-1 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${persona.avatarGradient} flex-shrink-0 flex items-center justify-center shadow-sm`}>
                 <span className="text-white text-xs font-bold select-none">
                   {resolvedName.substring(0, 2).toUpperCase()}
                 </span>
               </div>
-            </button>
+            </div>
           ) : (
-            /* ── Expanded: full row button → toggle accordion ── */
-            <button
-              onClick={() => setUserMenuOpen((v) => !v)}
-              aria-expanded={userMenuOpen}
+            /* ── Expanded: full avatar row ── */
+            <div
+              ref={avatarRef}
               aria-label="Open user menu"
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors group"
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${persona.avatarGradient} flex-shrink-0 flex items-center justify-center shadow-sm`}>
                 <span className="text-white text-xs font-bold select-none">
@@ -486,12 +406,7 @@ export function LeftNavigation({
                 <p className="text-sm font-medium text-gray-900 truncate leading-tight">{resolvedName}</p>
                 <p className="text-xs text-gray-500 truncate leading-tight capitalize">{userRole}</p>
               </div>
-              <ChevronDown
-                size={14}
-                aria-hidden="true"
-                className={`flex-shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
-              />
-            </button>
+            </div>
           )}
         </div>
       </div>
@@ -552,15 +467,18 @@ export function LeftNavigation({
         </div>
       )}
 
-      {/* ── User flyout panel (collapsed mode) ──────────────────────────── */}
-      {navCollapsed && userFlyout && (
+      {/* ── User floating dropdown (both collapsed + expanded) ──────────── */}
+      {userFlyout && (
         <div
           className="hidden md:block fixed z-50"
-          style={{ top: userFlyout.top - 4, left: userFlyout.left }}
+          style={{
+            bottom: 12,
+            left: navCollapsed ? 58 : 228,
+          }}
           onMouseEnter={keepUserFlyout}
           onMouseLeave={closeUserFlyoutDelayed}
         >
-          <div className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-[210px]">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-[220px]">
             {/* User header */}
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
               <p className="text-sm font-semibold text-gray-900 truncate">{resolvedName}</p>
@@ -595,23 +513,23 @@ export function LeftNavigation({
               })}
             </div>
 
-            {/* ── Divider + standard items ── */}
+            {/* ── Divider + log out ── */}
             <div className="border-t border-gray-100 mx-2 mb-1" />
             <div className="px-2 pb-2">
-              {filteredUserMenuItems.map(({ label, icon: Icon, action, danger }) => (
+              {userMenuItems.map(({ label, icon: Icon, action, danger }) => (
                 <button
                   key={label}
                   onClick={action}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-md
-                    text-[15px] font-medium transition-colors duration-150
+                    text-[13px] font-medium transition-colors duration-150
                     ${danger
                       ? "text-red-600 hover:bg-red-50"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     }
                   `}
                 >
-                  <Icon size={18} strokeWidth={1.75} className="flex-shrink-0" aria-hidden="true" />
+                  <Icon size={16} strokeWidth={1.75} className="flex-shrink-0" aria-hidden="true" />
                   <span>{label}</span>
                 </button>
               ))}

@@ -26,8 +26,8 @@ export const ROLE_BLOCKED_PATHS: Record<DemoRole, string[]> = {
  */
 export const ROLE_HIDDEN_NAV_IDS: Record<DemoRole, Set<string>> = {
   admin:   new Set(["my-submissions"]),
-  manager: new Set(["my-submissions"]),
-  custom:  new Set(["approval-flow", "user-management"]),
+  manager: new Set(["my-submissions", "settings"]),
+  custom:  new Set(["approval-flow", "user-management", "settings"]),
 };
 
 /** Returns true if the given pathname is blocked for the given role. */

@@ -3,8 +3,9 @@ import { FormField } from "../ui/FormField";
 import { PetTypeBadgeSelector } from "../ui/PetTypeBadgeSelector";
 import type { PetType } from "../../../types/clinic";
 
-const CARD =
-  "bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5";
+import { surface } from "../../../lib/styles/tokens";
+
+const CARD = surface.section;
 
 export interface TaxonomyData {
   petTypes: PetType[];

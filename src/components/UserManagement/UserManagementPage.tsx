@@ -9,12 +9,19 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Search, Edit2, Trash2, Shield, Users, UserCog,
+  Edit2, Trash2, Shield, Users, UserCog,
   Mail, CheckCircle2, Clock,
 } from "lucide-react";
 import { InviteUserModal } from "./InviteUserModal";
+import { SearchInput } from "../ui/Input";
+import { FilterPill } from "../ui/FilterPill";
+import { Avatar } from "../ui/Avatar";
+import { RoleBadge, UserStatusIndicator } from "../ui/StatusBadge";
+import { IconButton } from "../ui/Button";
+import { Table } from "../ui/Table";
+import { surface, text } from "../../lib/styles/tokens";
 
-/* ─── Types ──────────────────────────────────────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────────────── */
 
 type UserRole   = "admin" | "manager" | "custom";
 type UserStatus = "active" | "pending" | "inactive";
@@ -31,7 +38,7 @@ interface User {
   avatarColor: string;
 }
 
-/* ─── Mock Data ──────────────────────────────────────────────────────────── */
+/* ─── Mock Data ──────────────────────────────────────────────────── */
 
 const MOCK_USERS: User[] = [
   { id: "u1", name: "Admin User",     email: "admin@atlas.com",   role: "admin",   status: "active",   locations: 9, joinedAt: "Jan 15, 2026", initials: "AU", avatarColor: "from-violet-500 to-violet-700" },
@@ -43,25 +50,25 @@ const MOCK_USERS: User[] = [
   { id: "u7", name: "Michael Torres", email: "michael@atlas.com", role: "manager", status: "inactive", locations: 4, joinedAt: "Jan 30, 2026", initials: "MT", avatarColor: "from-gray-400 to-gray-600"    },
 ];
 
-/* ─── Style Maps ─────────────────────────────────────────────────────────── */
+import type { LucideIcon } from "lucide-react";
 
-const ROLE_META: Record<UserRole, { icon: React.ElementType; badge: string; label: string }> = {
-  admin:   { icon: Shield,  badge: "bg-violet-50 text-violet-700 border border-violet-200", label: "Admin"   },
-  manager: { icon: Users,   badge: "bg-blue-50 text-blue-700 border border-blue-200",       label: "Manager" },
-  custom:  { icon: UserCog, badge: "bg-teal-50 text-teal-700 border border-teal-200",       label: "Custom"  },
+const ROLE_ICON: Record<UserRole, LucideIcon> = {
+  admin: Shield, manager: Users, custom: UserCog,
 };
 
-const STATUS_META: Record<UserStatus, { icon: React.ElementType; badge: string; label: string }> = {
-  active:   { icon: CheckCircle2, badge: "text-emerald-600", label: "Active"   },
-  pending:  { icon: Clock,        badge: "text-amber-500",   label: "Pending"  },
-  inactive: { icon: Clock,        badge: "text-gray-400",    label: "Inactive" },
+const STATUS_ICON: Record<UserStatus, LucideIcon> = {
+  active: CheckCircle2, pending: Clock, inactive: Clock,
 };
 
-/* ─── Component ──────────────────────────────────────────────────────────── */
+const ROLE_LABEL: Record<UserRole, string> = {
+  admin: "Admin", manager: "Manager", custom: "Custom",
+};
+
+/* ─── Component ──────────────────────────────────────────────────── */
 
 export function UserManagementPage() {
   const location = useLocation();
-  const navigate = useNavigate(); // used for invite redirect on TopBar CTA
+  const navigate = useNavigate();
 
   const [searchQuery,   setSearchQuery]   = useState("");
   const [roleFilter,    setRoleFilter]    = useState<UserRole | "all">("all");
@@ -105,9 +112,8 @@ export function UserManagementPage() {
   const counts = { all: users.length, admin: 0, manager: 0, custom: 0 };
   users.forEach((u) => { counts[u.role]++; });
 
-  /* ─── Render ── */
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50">
+    <div className={surface.page}>
 
       {/* Success banner */}
       {successBanner && (
@@ -121,134 +127,103 @@ export function UserManagementPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative min-w-[240px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-            <input
-              type="text"
-              placeholder="Search by name or email…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            />
-          </div>
+          <SearchInput
+            placeholder="Search by name or email…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            wrapperClassName="min-w-[240px]"
+          />
           <div className="flex items-center gap-1.5">
             {(["all", "admin", "manager", "custom"] as const).map((r) => (
-              <button
+              <FilterPill
                 key={r}
+                active={roleFilter === r}
+                variant="bordered"
                 onClick={() => setRoleFilter(r)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  roleFilter === r
-                    ? "bg-teal-600 text-white border-teal-600"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                }`}
               >
-                {r === "all" ? "All" : ROLE_META[r].label} ({counts[r]})
-              </button>
+                {r === "all" ? "All" : ROLE_LABEL[r]} ({counts[r]})
+              </FilterPill>
             ))}
           </div>
         </div>
 
-        {/* User table — matches platform table pattern */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[260px]">User</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">Email</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[120px]">Role</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[110px]">Status</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 w-[90px]">Locations</th>
-                <th className="px-5 py-3 w-[64px]" />
-              </tr>
-            </thead>
-            <tbody>
+        {/* User table */}
+        <Table.Wrapper>
+          <Table.Root>
+            <Table.Header>
+              <Table.HeaderCell width="260px">User</Table.HeaderCell>
+              <Table.HeaderCell>Email</Table.HeaderCell>
+              <Table.HeaderCell width="120px">Role</Table.HeaderCell>
+              <Table.HeaderCell width="110px">Status</Table.HeaderCell>
+              <Table.HeaderCell width="90px">Locations</Table.HeaderCell>
+              <Table.HeaderCell width="64px" />
+            </Table.Header>
+
+            <Table.Body>
               {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center">
-                    <Users size={32} className="text-gray-200 mx-auto mb-3" aria-hidden="true" />
-                    <p className="text-sm text-gray-500 font-medium">No users found</p>
-                    <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filter</p>
-                  </td>
-                </tr>
+                <Table.EmptyState
+                  colSpan={6}
+                  icon={Users}
+                  title="No users found"
+                  subtitle="Try adjusting your search or filter"
+                />
               ) : (
-                filtered.map((user, idx) => {
-                  const rm = ROLE_META[user.role];
-                  const sm = STATUS_META[user.status];
-                  const RI = rm.icon;
-                  const SI = sm.icon;
-                  return (
-                    <tr
-                      key={user.id}
-                      className={`border-b border-gray-100 last:border-0 hover:bg-gray-50/70 transition-colors group ${
-                        idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
-                      }`}
-                    >
-                      {/* Avatar + Name */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${user.avatarColor} flex-shrink-0 flex items-center justify-center shadow-sm`}>
-                            <span className="text-white text-[11px] font-bold select-none">{user.initials}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                            <p className="text-[11px] text-gray-400">Joined {user.joinedAt}</p>
-                          </div>
+                filtered.map((user, idx) => (
+                  <Table.Row key={user.id} index={idx}>
+                    {/* Avatar + Name */}
+                    <Table.Cell>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar initials={user.initials} gradient={user.avatarColor} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                          <p className={text.caption}>Joined {user.joinedAt}</p>
                         </div>
-                      </td>
+                      </div>
+                    </Table.Cell>
 
-                      {/* Email */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Mail size={12} className="text-gray-300 flex-shrink-0" aria-hidden="true" />
-                          <span className="text-xs text-gray-500 truncate">{user.email}</span>
-                        </div>
-                      </td>
+                    {/* Email */}
+                    <Table.Cell>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Mail size={12} className="text-gray-300 flex-shrink-0" aria-hidden="true" />
+                        <span className={text.bodySmall + " truncate"}>{user.email}</span>
+                      </div>
+                    </Table.Cell>
 
-                      {/* Role */}
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${rm.badge}`}>
-                          <RI size={11} aria-hidden="true" /> {rm.label}
-                        </span>
-                      </td>
+                    {/* Role */}
+                    <Table.Cell>
+                      <RoleBadge role={user.role} icon={ROLE_ICON[user.role]} />
+                    </Table.Cell>
 
-                      {/* Status */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <SI size={13} className={sm.badge} aria-hidden="true" />
-                          <span className={`text-xs font-medium ${sm.badge}`}>{sm.label}</span>
-                        </div>
-                      </td>
+                    {/* Status */}
+                    <Table.Cell>
+                      <UserStatusIndicator status={user.status} icon={STATUS_ICON[user.status]} />
+                    </Table.Cell>
 
-                      {/* Locations */}
-                      <td className="px-5 py-3.5">
-                        <span className="text-xs text-gray-500">
-                          {user.role === "admin" ? "All" : user.locations}
-                        </span>
-                      </td>
+                    {/* Locations */}
+                    <Table.Cell>
+                      <span className={text.bodySmall}>
+                        {user.role === "admin" ? "All" : user.locations}
+                      </span>
+                    </Table.Cell>
 
-                      {/* Actions */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 hover:bg-gray-100 rounded-md transition-colors" title="Edit" aria-label="Edit user">
-                            <Edit2 size={13} className="text-gray-400" aria-hidden="true" />
-                          </button>
-                          <button className="p-1.5 hover:bg-red-50 rounded-md transition-colors" title="Remove" aria-label="Remove user">
-                            <Trash2 size={13} className="text-red-400" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                    {/* Actions */}
+                    <Table.Cell>
+                      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <IconButton icon={Edit2} label="Edit user" size="sm" />
+                        <IconButton icon={Trash2} label="Remove user" size="sm" variant="danger" />
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
               )}
-            </tbody>
-          </table>
-        </div>
+            </Table.Body>
+          </Table.Root>
+        </Table.Wrapper>
 
         {/* Summary row */}
-        <p className="text-xs text-gray-400 px-1">
+        <p className={text.caption + " px-1"}>
           {filtered.length} of {users.length} users
-          {roleFilter !== "all" && ` · filtered by ${ROLE_META[roleFilter].label}`}
+          {roleFilter !== "all" && ` · filtered by ${ROLE_LABEL[roleFilter]}`}
         </p>
 
       </div>

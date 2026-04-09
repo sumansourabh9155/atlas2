@@ -33,7 +33,7 @@ export interface RouteConfig {
   /** Human-readable page label — used in TopBar and nav items */
   label: string;
   /** Which nav section this appears in (omit for hidden routes) */
-  navSection?: "home" | "sites" | "analytics" | "management" | "bottom";
+  navSection?: "home" | "sites" | "analytics" | "management" | "support" | "bottom";
   /** Lucide icon for nav item */
   icon?: LucideIcon;
   /** True if this nav item has a collapsible submenu */
@@ -163,19 +163,19 @@ export const ROUTES: RouteConfig[] = [
     cta: { label: "Invite User", action: "invite-user", icon: UserPlus },
   },
 
-  // ─── SETTINGS / HELP — shown in user profile submenu, not in sidebar nav ─
+  // ─── SUPPORT — Settings + Help, below Management in the sidebar ──────────
   {
     path: "/settings",
     id: "settings",
     label: "Settings",
-    hideFromNav: true,
+    navSection: "support",
     icon: Settings,
   },
   {
     path: "/help",
     id: "help",
     label: "Get Help",
-    hideFromNav: true,
+    navSection: "support",
     icon: HelpCircle,
   },
 

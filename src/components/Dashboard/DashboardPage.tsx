@@ -10,18 +10,24 @@
 import React, { useState } from "react";
 import {
   Globe, CheckCircle2, Clock,
-  AlertCircle, ArrowUpRight, ArrowUp, ArrowDown,
+  AlertCircle, ArrowUpRight,
   ChevronRight, RefreshCw,
   Building2, Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { KpiCard } from "../ui/KpiCard";
+import { Card, CardHeader } from "../ui/Card";
+import { Avatar } from "../ui/Avatar";
+import { Badge } from "../ui/Badge";
+import { FilterPill } from "../ui/FilterPill";
+import { surface, text } from "../../lib/styles/tokens";
 
-/* ─── Types ──────────────────────────────────────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────────────── */
 
 type ActivityType = "published" | "submitted" | "approved" | "rejected" | "created" | "updated" | "domain";
 type UrgencyLevel = "critical" | "warning" | "info";
 
-/* ─── Mock Data ──────────────────────────────────────────────────────────── */
+/* ─── Mock Data ──────────────────────────────────────────────────── */
 
 const PIPELINE_STAGES = [
   { id: "draft",       label: "Draft",       count: 47, bar: "bg-gray-400",   pct: 25 },
@@ -68,18 +74,28 @@ const ATTENTION_ITEMS = [
   },
 ];
 
+const VERB_VARIANT: Record<string, "primary" | "warning" | "success" | "danger" | "neutral" | "info" | "violet"> = {
+  submitted: "warning",
+  published: "primary",
+  approved:  "success",
+  rejected:  "danger",
+  created:   "neutral",
+  updated:   "info",
+  domain:    "violet",
+};
+
 const ACTIVITY_FEED = [
-  { id: "f1", actor: "Sarah M.",  initials: "SM", color: "bg-violet-500", verb: "submitted",  verbColor: "bg-amber-100 text-amber-700",    site: "Luminary Salon & Spa",            industry: "Hair & Beauty Salon",    time: "2m ago",  action: "Review" },
-  { id: "f2", actor: "James K.",  initials: "JK", color: "bg-blue-500",   verb: "published",  verbColor: "bg-teal-100 text-teal-700",      site: "Bellwood Bistro & Bar",           industry: "Restaurant & Café",      time: "1h ago",  action: "View" },
-  { id: "f3", actor: "Admin",     initials: "AD", color: "bg-teal-600",   verb: "approved",   verbColor: "bg-emerald-100 text-emerald-700", site: "Summit Realty Partners",         industry: "Real Estate Agency",     time: "3h ago",  action: "View" },
-  { id: "f4", actor: "Maria L.",  initials: "ML", color: "bg-pink-500",   verb: "created",    verbColor: "bg-gray-100 text-gray-600",      site: "Harbor City Auto Care",           industry: "Automotive Services",    time: "5h ago",  action: "Edit" },
-  { id: "f5", actor: "Dev T.",    initials: "DT", color: "bg-indigo-500", verb: "updated",    verbColor: "bg-blue-100 text-blue-700",      site: "Midtown Family Health Center",    industry: "Healthcare Clinic",      time: "7h ago",  action: "View" },
-  { id: "f6", actor: "Sarah M.",  initials: "SM", color: "bg-violet-500", verb: "rejected",   verbColor: "bg-red-100 text-red-700",        site: "Blue Ridge Outdoor & Apparel",    industry: "Retail Store",           time: "1d ago",  action: "Edit" },
-  { id: "f7", actor: "James K.",  initials: "JK", color: "bg-blue-500",   verb: "published",  verbColor: "bg-teal-100 text-teal-700",      site: "Pawsome Pet Boarding & Grooming", industry: "Pet Services",           time: "1d ago",  action: "View" },
-  { id: "f8", actor: "Admin",     initials: "AD", color: "bg-teal-600",   verb: "domain",     verbColor: "bg-purple-100 text-purple-700",  site: "Apex Consulting Group",           industry: "Professional Services",  time: "2d ago",  action: "View" },
+  { id: "f1", actor: "Sarah M.",  initials: "SM", gradient: "from-violet-500 to-violet-700", verb: "submitted",  site: "Luminary Salon & Spa",            industry: "Hair & Beauty Salon",    time: "2m ago",  action: "Review" },
+  { id: "f2", actor: "James K.",  initials: "JK", gradient: "from-blue-400 to-blue-600",     verb: "published",  site: "Bellwood Bistro & Bar",           industry: "Restaurant & Café",      time: "1h ago",  action: "View" },
+  { id: "f3", actor: "Admin",     initials: "AD", gradient: "from-teal-500 to-teal-700",     verb: "approved",   site: "Summit Realty Partners",          industry: "Real Estate Agency",     time: "3h ago",  action: "View" },
+  { id: "f4", actor: "Maria L.",  initials: "ML", gradient: "from-pink-400 to-pink-600",     verb: "created",    site: "Harbor City Auto Care",           industry: "Automotive Services",    time: "5h ago",  action: "Edit" },
+  { id: "f5", actor: "Dev T.",    initials: "DT", gradient: "from-indigo-500 to-indigo-700", verb: "updated",    site: "Midtown Family Health Center",    industry: "Healthcare Clinic",      time: "7h ago",  action: "View" },
+  { id: "f6", actor: "Sarah M.",  initials: "SM", gradient: "from-violet-500 to-violet-700", verb: "rejected",   site: "Blue Ridge Outdoor & Apparel",   industry: "Retail Store",           time: "1d ago",  action: "Edit" },
+  { id: "f7", actor: "James K.",  initials: "JK", gradient: "from-blue-400 to-blue-600",     verb: "published",  site: "Pawsome Pet Boarding & Grooming", industry: "Pet Services",           time: "1d ago",  action: "View" },
+  { id: "f8", actor: "Admin",     initials: "AD", gradient: "from-teal-500 to-teal-700",     verb: "domain",     site: "Apex Consulting Group",          industry: "Professional Services",  time: "2d ago",  action: "View" },
 ];
 
-/* ─── Main Component ─────────────────────────────────────────────────────── */
+/* ─── Main Component ─────────────────────────────────────────────── */
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -93,61 +109,32 @@ export function DashboardPage() {
   const criticalCount = ATTENTION_ITEMS.filter((a) => a.urgency === "critical").length;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50">
+    <div className={surface.page}>
       <div className="p-6 space-y-4">
 
-        {/* ══════════════════════════════════════════════════════════════
-            ROW 1 — KPI Stat Cards (most important at a glance)
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ═══ ROW 1 — KPI Stat Cards ═══ */}
         <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: "Total Sites",       value: 145, delta: "+12 this month", deltaUp: true,  icon: Building2,    iconBg: "bg-blue-50",    iconColor: "text-blue-600",    path: "/sites/all" },
-            { label: "Published",         value: 98,  delta: "+8 this week",   deltaUp: true,  icon: CheckCircle2, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", path: "/sites/all" },
-            { label: "Pending Approvals", value: 7,   delta: "3 urgent today", deltaUp: false, icon: Clock,        iconBg: "bg-amber-50",   iconColor: "text-amber-600",   path: "/approvals" },
-            { label: "Live Domains",      value: 43,  delta: "+5 this month",  deltaUp: true,  icon: Globe,        iconBg: "bg-teal-50",    iconColor: "text-teal-600",    path: "/sites/all" },
-          ].map((m) => {
-            const Icon = m.icon;
-            return (
-              <button
-                key={m.label}
-                onClick={() => navigate(m.path)}
-                className="bg-white border border-gray-200 rounded-xl p-5 text-left hover:border-gray-300 hover:shadow-sm transition-all group"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{m.label}</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2 tabular-nums">{m.value}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      {m.deltaUp
-                        ? <ArrowUp   size={11} className="text-emerald-500 flex-shrink-0" />
-                        : <ArrowDown size={11} className="text-red-400 flex-shrink-0" />}
-                      <span className="text-xs text-gray-400">{m.delta}</span>
-                    </div>
-                  </div>
-                  <div className={`${m.iconBg} rounded-lg p-2.5 flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                    <Icon size={18} className={m.iconColor} aria-hidden="true" />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          <KpiCard label="Total Sites"       value={145} icon={Building2}    color="blue"    delta="+12 this month" deltaUp onClick={() => navigate("/sites/all")} />
+          <KpiCard label="Published"         value={98}  icon={CheckCircle2} color="emerald" delta="+8 this week"   deltaUp onClick={() => navigate("/sites/all")} />
+          <KpiCard label="Pending Approvals" value={7}   icon={Clock}        color="amber"   delta="3 urgent today" deltaUp={false} onClick={() => navigate("/approvals")} />
+          <KpiCard label="Live Domains"      value={43}  icon={Globe}        color="teal"    delta="+5 this month"  deltaUp onClick={() => navigate("/sites/all")} />
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════
-            ROW 2 — Needs Attention | Recent Activity
-        ══════════════════════════════════════════════════════════════ */}
+        {/* ═══ ROW 2 — Needs Attention | Recent Activity ═══ */}
         <div className="grid grid-cols-3 gap-4">
 
           {/* Needs Attention */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Needs Attention</h2>
-              {criticalCount > 0 && (
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                  {criticalCount}
-                </span>
-              )}
-            </div>
+          <Card variant="flush">
+            <CardHeader
+              title="Needs Attention"
+              action={
+                criticalCount > 0 ? (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                    {criticalCount}
+                  </span>
+                ) : undefined
+              }
+            />
             <div className="flex-1 divide-y divide-gray-50">
               {ATTENTION_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -159,7 +146,7 @@ export function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800 leading-snug">{item.title}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5 leading-snug line-clamp-2">{item.detail}</p>
+                        <p className={`${text.caption} mt-0.5 leading-snug line-clamp-2`}>{item.detail}</p>
                         <button
                           onClick={() => navigate(item.path)}
                           className="mt-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-0.5"
@@ -172,35 +159,34 @@ export function DashboardPage() {
                 );
               })}
             </div>
-          </div>
+          </Card>
 
           {/* Recent Activity */}
-          <div className="col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-gray-900 flex-shrink-0">Recent Activity</h2>
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {(["all", "submitted", "published", "approved", "rejected", "created"] as const).map((f) => (
+          <Card variant="flush" className="col-span-2">
+            <CardHeader
+              title="Recent Activity"
+              action={
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                    {(["all", "submitted", "published", "approved", "rejected", "created"] as const).map((f) => (
+                      <FilterPill
+                        key={f}
+                        active={activityFilter === f}
+                        onClick={() => setActivityFilter(f)}
+                      >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                      </FilterPill>
+                    ))}
+                  </div>
                   <button
-                    key={f}
-                    onClick={() => setActivityFilter(f)}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors ${
-                      activityFilter === f
-                        ? "bg-teal-600 text-white"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                    }`}
+                    onClick={() => navigate("/approvals")}
+                    className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1 flex-shrink-0"
                   >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                    View all <ArrowUpRight size={12} />
                   </button>
-                ))}
-              </div>
-              <button
-                onClick={() => navigate("/approvals")}
-                className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1 flex-shrink-0"
-              >
-                View all <ArrowUpRight size={12} />
-              </button>
-            </div>
-
+                </div>
+              }
+            />
             <div className="divide-y divide-gray-50">
               {filteredActivity.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">No activity for this filter</div>
@@ -208,21 +194,17 @@ export function DashboardPage() {
                 filteredActivity.map((item) => (
                   <div key={item.id} className="px-6 py-3.5 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-7 h-7 rounded-full ${item.color} flex items-center justify-center flex-shrink-0`}>
-                        <span className="text-white text-[10px] font-bold select-none">{item.initials}</span>
-                      </div>
+                      <Avatar initials={item.initials} gradient={item.gradient} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-semibold text-gray-800">{item.actor}</span>
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${item.verbColor}`}>
-                            {item.verb}
-                          </span>
+                          <Badge variant={VERB_VARIANT[item.verb] ?? "neutral"} size="sm">{item.verb}</Badge>
                           <span className="text-xs text-gray-700 truncate max-w-[180px]">{item.site}</span>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{item.industry}</p>
+                        <p className={text.caption + " mt-0.5"}>{item.industry}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-[11px] text-gray-400 whitespace-nowrap">{item.time}</span>
+                        <span className={text.caption + " whitespace-nowrap"}>{item.time}</span>
                         <button className="text-[11px] font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-2 py-1 rounded transition-colors">
                           {item.action}
                         </button>
@@ -232,26 +214,23 @@ export function DashboardPage() {
                 ))
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════
-            ROW 3 — Publication Pipeline (stage distribution)
-        ══════════════════════════════════════════════════════════════ */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">Publication Pipeline</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{totalSites} total sites across all stages</p>
-            </div>
-            <button
-              onClick={() => navigate("/sites/all")}
-              className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
-            >
-              Manage all <ArrowUpRight size={12} />
-            </button>
-          </div>
-
+        {/* ═══ ROW 3 — Publication Pipeline ═══ */}
+        <Card variant="flush">
+          <CardHeader
+            title="Publication Pipeline"
+            subtitle={`${totalSites} total sites across all stages`}
+            action={
+              <button
+                onClick={() => navigate("/sites/all")}
+                className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+              >
+                Manage all <ArrowUpRight size={12} />
+              </button>
+            }
+          />
           <div className="px-6 py-5">
             {/* Segmented bar */}
             <div className="flex rounded-full overflow-hidden h-3 bg-gray-100 gap-px">
@@ -271,14 +250,14 @@ export function DashboardPage() {
                 <div key={stage.id} className="flex items-center gap-3 px-4 first:pl-0 last:pr-0">
                   <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${stage.bar}`} />
                   <div>
-                    <p className="text-xs text-gray-500">{stage.label}</p>
+                    <p className={text.bodySmall}>{stage.label}</p>
                     <p className="text-lg font-bold text-gray-900 tabular-nums leading-tight">{stage.count}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </Card>
 
       </div>
     </div>
