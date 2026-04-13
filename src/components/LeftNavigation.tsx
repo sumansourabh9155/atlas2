@@ -287,7 +287,7 @@ export function LeftNavigation({
   const HIDDEN_BY_ROLE: Record<DemoRole, Set<string>> = {
     admin:   new Set(["my-submissions"]),                                     // Admin doesn't submit — they approve
     manager: new Set(["my-submissions", "settings"]),                         // Manager doesn't submit; no settings access
-    custom:  new Set(["approval-flow", "user-management", "settings"]),       // Custom can't approve, manage users, or settings
+    custom:  new Set(["approval-flow", "user-management", "settings", "insights-ab-testing", "insights-funnels", ]),  // Custom: no approvals, users, settings, or analytics
   };
 
   /* ── Section ─────────────────────────────────────────────────────────── */

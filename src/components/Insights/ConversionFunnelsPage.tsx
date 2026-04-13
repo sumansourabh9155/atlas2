@@ -3,8 +3,9 @@
  * CSS-based funnel visualiser + device split + benchmark comparison.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TrendingDown, TrendingUp, Users, ChevronDown, ArrowDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { MOCK_FUNNELS, type Funnel, type FunnelStep } from "../../data/insightsMockData";
 
 /* ─── Funnel step block ───────────────────────────────────────────────────── */
@@ -111,7 +112,16 @@ function MiniFunnel({
 
 /* ─── Main Component ──────────────────────────────────────────────────────── */
 
-export function ConversionFunnelsPage() {
+interface ConversionFunnelsPageProps { userRole?: "admin" | "manager" | "custom"; }
+
+export function ConversionFunnelsPage({ userRole }: ConversionFunnelsPageProps) {
+  const navigate = useNavigate();
+
+  // Role guard — custom users cannot access analytics
+  useEffect(() => {
+    if (userRole === "custom") navigate("/dashboard", { replace: true });
+  }, [userRole, navigate]);
+
   const [funnelId, setFunnelId] = useState(MOCK_FUNNELS[0].id);
   const funnel = MOCK_FUNNELS.find((f) => f.id === funnelId) ?? MOCK_FUNNELS[0];
   const maxCount = funnel.steps[0].count;

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { ChevronDown, MoreVertical, ArrowUpDown } from "lucide-react";
+import { ChevronDown, MoreVertical, ArrowUpDown, Building2 } from "lucide-react";
 import { KpiCard } from "../ui/KpiCard";
 import { SearchInput } from "../ui/Input";
 import { Button, IconButton } from "../ui/Button";
@@ -146,8 +146,10 @@ export function SiteListPage() {
                   <input
                     type="checkbox"
                     checked={selectedRows.size === paginatedSites.length && paginatedSites.length > 0}
+                    disabled={paginatedSites.length === 0}
                     onChange={toggleAll}
-                    className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                    className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Select all sites"
                   />
                 </Table.HeaderCell>
                 {HEADERS.map((label) => (
@@ -161,7 +163,14 @@ export function SiteListPage() {
               </Table.Header>
 
               <Table.Body>
-                {paginatedSites.map((site, idx) => (
+                {paginatedSites.length === 0 ? (
+                  <Table.EmptyState
+                    colSpan={8}
+                    icon={Building2}
+                    title="No sites found"
+                    subtitle="Try adjusting your search or filters."
+                  />
+                ) : paginatedSites.map((site, idx) => (
                   <Table.Row key={site.id} index={idx} style={{ height: "55px" }}>
                     <Table.Cell className="px-4">
                       <input
@@ -169,6 +178,7 @@ export function SiteListPage() {
                         checked={selectedRows.has(site.id)}
                         onChange={() => toggleRow(site.id)}
                         className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                        aria-label={`Select ${site.name}`}
                       />
                     </Table.Cell>
                     <Table.Cell className="font-medium text-gray-900 truncate">{site.name}</Table.Cell>
@@ -178,7 +188,7 @@ export function SiteListPage() {
                     <Table.Cell className="text-gray-600 font-medium">{abbr(site.state)}</Table.Cell>
                     <Table.Cell className="text-gray-600 truncate">{site.groupName || "---"}</Table.Cell>
                     <Table.Cell align="right">
-                      <IconButton icon={MoreVertical} label="Actions" />
+                      <IconButton icon={MoreVertical} label={`Actions for ${site.name}`} />
                     </Table.Cell>
                   </Table.Row>
                 ))}

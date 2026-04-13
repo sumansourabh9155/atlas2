@@ -55,7 +55,7 @@ export interface ButtonProps
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export function Button({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = "primary",
   size = "md",
   icon: LeftIcon,
@@ -66,11 +66,12 @@ export function Button({
   className = "",
   children,
   ...rest
-}: ButtonProps) {
+}: ButtonProps, ref) {
   const isDisabled = disabled || loading;
 
   return (
     <button
+      ref={ref}
       disabled={isDisabled}
       className={[
         "inline-flex items-center justify-center font-medium rounded-lg",
@@ -112,7 +113,7 @@ export function Button({
       )}
     </button>
   );
-}
+});
 
 /* ── IconButton — square icon-only variant ──────────────────────── */
 

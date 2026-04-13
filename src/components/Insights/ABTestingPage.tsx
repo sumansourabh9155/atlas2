@@ -3,11 +3,12 @@
  * Active tests with confidence bars + completed results table + insights panel.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   GitBranch, CheckCircle2, Clock, TrendingUp, TrendingDown,
   Plus, X, ChevronRight, ArrowUpRight, Info,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { MOCK_AB_TESTS, type ABTest } from "../../data/insightsMockData";
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
@@ -208,9 +209,17 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
 
 /* ─── Main Component ──────────────────────────────────────────────────────── */
 
-export function ABTestingPage() {
+interface ABTestingPageProps { userRole?: "admin" | "manager" | "custom"; }
+
+export function ABTestingPage({ userRole }: ABTestingPageProps) {
+  const navigate = useNavigate();
   const [tab, setTab]             = useState<"active" | "completed">("active");
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Role guard — custom users cannot access analytics
+  useEffect(() => {
+    if (userRole === "custom") navigate("/dashboard", { replace: true });
+  }, [userRole, navigate]);
 
   const activeTests    = MOCK_AB_TESTS.filter((t) => t.status === "active");
   const completedTests = MOCK_AB_TESTS.filter((t) => t.status === "completed");

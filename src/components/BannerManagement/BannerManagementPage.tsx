@@ -1,21 +1,28 @@
 /**
  * Banner Management Page
- * Manage ads/banners for the website - location, timing, and placement
+ * Manage ads/banners for the website — location, timing, and placement.
+ *
+ * Fixes:
+ *  - ConfirmDialog replaces window.confirm() for delete
+ *  - Toast feedback on create, update, delete
+ *  - Cancel button in form
+ *  - Red border on invalid required inputs (inline validation)
+ *  - Button / IconButton from design system
+ *  - EmptyState component for no-banners state
  */
 
 import React, { useState } from "react";
 import {
-  Plus,
-  Edit2,
-  Trash2,
-  Eye,
-  Clock,
-  MapPin,
-  LayoutTemplate,
-  ToggleLeft,
-  ToggleRight,
-  AlertCircle,
+  Plus, Edit2, Trash2, Eye, Clock, MapPin, LayoutTemplate,
+  ToggleLeft, ToggleRight, Megaphone,
 } from "lucide-react";
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { ConfirmDialog, type ConfirmState } from "../ui/ConfirmDialog";
+import { ToastContainer, useToast } from "../ui/Toast";
+import { surface } from "../../lib/styles/tokens";
+
+/* ── Types ───────────────────────────────────────────────────────────────── */
 
 interface Banner {
   id: string;
@@ -33,212 +40,176 @@ interface Banner {
 }
 
 const LOCATION_OPTIONS = [
-  { id: "header", label: "Header", icon: "🔝" },
-  { id: "footer", label: "Footer", icon: "🔻" },
-  { id: "sidebar", label: "Sidebar", icon: "◀️" },
-  { id: "popup", label: "Popup Modal", icon: "📦" },
-  { id: "banner-top", label: "Top Banner", icon: "📢" },
+  { id: "header",        label: "Header",        icon: "🔝" },
+  { id: "footer",        label: "Footer",        icon: "🔻" },
+  { id: "sidebar",       label: "Sidebar",       icon: "◀️" },
+  { id: "popup",         label: "Popup Modal",   icon: "📦" },
+  { id: "banner-top",    label: "Top Banner",    icon: "📢" },
   { id: "banner-bottom", label: "Bottom Banner", icon: "📣" },
 ];
 
 const PLACEMENT_OPTIONS = [
-  { id: "before-content", label: "Before Content", description: "Appears before main content" },
-  { id: "after-content", label: "After Content", description: "Appears after main content" },
-  { id: "overlay", label: "Overlay", description: "Floats over content" },
-  { id: "side-panel", label: "Side Panel", description: "Fixed position side panel" },
+  { id: "before-content", label: "Before Content", description: "Appears before main content"  },
+  { id: "after-content",  label: "After Content",  description: "Appears after main content"   },
+  { id: "overlay",        label: "Overlay",        description: "Floats over content"           },
+  { id: "side-panel",     label: "Side Panel",     description: "Fixed position side panel"    },
 ];
 
+const EMPTY_FORM: Partial<Banner> = {
+  name: "", location: "header", placement: "before-content",
+  startDate: "", endDate: "", startTime: "", endTime: "", content: "", isActive: true,
+};
+
+/* ── Input styling helpers ───────────────────────────────────────────────── */
+
+const baseInput = "w-full px-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors";
+const inputCls  = (invalid: boolean) =>
+  `${baseInput} ${invalid ? "border-red-400 bg-red-50" : "border-gray-300"}`;
+
+/* ── Component ───────────────────────────────────────────────────────────── */
+
 export function BannerManagementPage() {
-  const [banners, setBanners] = useState<Banner[]>([
-    {
-      id: "1",
-      name: "Summer Promotion",
-      location: "header",
-      placement: "before-content",
-      startDate: "2026-03-25",
-      endDate: "2026-06-25",
-      startTime: "08:00",
-      endTime: "20:00",
-      content: "Summer special offer - 20% off all services!",
-      isActive: true,
-      createdAt: "2026-03-20",
-    },
-    {
-      id: "2",
-      name: "Newsletter Signup",
-      location: "popup",
-      placement: "overlay",
-      startDate: "2026-03-25",
-      endDate: "2026-12-31",
-      content: "Subscribe to our newsletter for updates",
-      isActive: true,
-      createdAt: "2026-03-19",
-    },
+  const [banners,    setBanners]    = useState<Banner[]>([
+    { id: "1", name: "Summer Promotion",   location: "header", placement: "before-content", startDate: "2026-03-25", endDate: "2026-06-25", startTime: "08:00", endTime: "20:00", content: "Summer special offer — 20% off all services!", isActive: true,  createdAt: "2026-03-20" },
+    { id: "2", name: "Newsletter Signup",  location: "popup",  placement: "overlay",        startDate: "2026-03-25", endDate: "2026-12-31", content: "Subscribe to our newsletter for updates",                                                     isActive: true,  createdAt: "2026-03-19" },
   ]);
+  const [showForm,   setShowForm]   = useState(false);
+  const [editingId,  setEditingId]  = useState<string | null>(null);
+  const [formData,   setFormData]   = useState<Partial<Banner>>(EMPTY_FORM);
+  const [touched,    setTouched]    = useState(false);
+  const [confirm,    setConfirm]    = useState<ConfirmState | null>(null);
+  const { toasts, toast, dismiss }  = useToast();
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<Banner>>({
-    name: "",
-    location: "header",
-    placement: "before-content",
-    startDate: "",
-    endDate: "",
-    startTime: "",
-    endTime: "",
-    content: "",
-    isActive: true,
-  });
-
-  // Handle Escape key to close form
+  /* Escape key closes form */
   React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setShowForm(false);
-      }
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeForm(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const handleAddNew = () => {
+  const closeForm = () => { setShowForm(false); setTouched(false); };
+
+  const openAdd = () => {
     setEditingId(null);
-    setFormData({
-      name: "",
-      location: "header",
-      placement: "before-content",
-      startDate: "",
-      endDate: "",
-      startTime: "",
-      endTime: "",
-      content: "",
-      isActive: true,
-    });
+    setFormData(EMPTY_FORM);
+    setTouched(false);
     setShowForm(true);
   };
 
-  const handleEdit = (banner: Banner) => {
+  const openEdit = (banner: Banner) => {
     setEditingId(banner.id);
     setFormData(banner);
+    setTouched(false);
     setShowForm(true);
   };
 
+  const patch = (partial: Partial<Banner>) => setFormData((f) => ({ ...f, ...partial }));
+
   const handleSave = () => {
-    if (!formData.name || !formData.startDate || !formData.endDate) {
-      alert("Please fill in all required fields");
-      return;
-    }
+    setTouched(true);
+    if (!formData.name || !formData.startDate || !formData.endDate || !formData.content) return;
 
     if (editingId) {
-      setBanners(
-        banners.map((b) =>
-          b.id === editingId ? { ...b, ...formData, id: editingId } : b
-        )
-      );
+      setBanners((prev) => prev.map((b) => b.id === editingId ? { ...b, ...formData, id: editingId } as Banner : b));
+      toast.success("Banner updated");
     } else {
-      setBanners([
-        ...banners,
-        {
-          ...formData,
-          id: `${Date.now()}`,
-          createdAt: new Date().toISOString().split("T")[0],
-        } as Banner,
-      ]);
+      setBanners((prev) => [...prev, { ...formData, id: `${Date.now()}`, createdAt: new Date().toISOString().split("T")[0] } as Banner]);
+      toast.success("Banner created");
     }
-    setShowForm(false);
+    closeForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this banner?")) {
-      setBanners(banners.filter((b) => b.id !== id));
-    }
+  const handleDelete = (banner: Banner) => {
+    setConfirm({
+      title:       `Delete "${banner.name}"?`,
+      message:     "This banner will be permanently removed.",
+      confirmLabel: "Delete",
+      variant:     "danger",
+      onConfirm: () => {
+        setBanners((prev) => prev.filter((b) => b.id !== banner.id));
+        toast.success(`"${banner.name}" deleted`);
+      },
+    });
   };
 
-  const toggleBannerStatus = (id: string) => {
-    setBanners(
-      banners.map((b) =>
-        b.id === id ? { ...b, isActive: !b.isActive } : b
-      )
-    );
+  const toggleStatus = (id: string) => {
+    setBanners((prev) => prev.map((b) => b.id === id ? { ...b, isActive: !b.isActive } : b));
   };
 
-  const getLocationLabel = (id: string) =>
-    LOCATION_OPTIONS.find((l) => l.id === id)?.label || id;
+  const getLocationLabel = (id: string) => LOCATION_OPTIONS.find((l) => l.id === id)?.label ?? id;
+  const getPlacementLabel = (id: string) => PLACEMENT_OPTIONS.find((p) => p.id === id)?.label ?? id;
 
-  const getPlacementLabel = (id: string) =>
-    PLACEMENT_OPTIONS.find((p) => p.id === id)?.label || id;
+  /* Validation */
+  const invalid = (field: keyof Banner) => touched && !formData[field];
 
   return (
-    <div className="flex-1 overflow-hidden bg-white flex flex-col">
-      <div className="p-10 overflow-y-auto flex-1">
-        {/* Add Banner Button */}
+    <div className={`${surface.page} overflow-y-auto`}>
+      <div className="p-8 space-y-6 max-w-4xl">
+
+        {/* Add button (hidden while form is open) */}
         {!showForm && (
-          <button
-            onClick={handleAddNew}
-            className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition"
-          >
-            <Plus size={18} />
+          <Button variant="primary" icon={Plus} onClick={openAdd}>
             Create New Banner
-          </button>
+          </Button>
         )}
 
-        {/* Form */}
+        {/* ── Form ── */}
         {showForm && (
-          <div className="mb-8 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden flex flex-col max-h-[85vh]">
-            {/* Sticky Header */}
-            <div className="sticky top-0 bg-gray-50 border-b border-gray-200 p-6 z-10 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col max-h-[85vh]">
+
+            {/* Sticky header */}
+            <div className="sticky top-0 bg-gray-50 border-b border-gray-200 px-6 py-4 z-10 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">
                 {editingId ? "Edit Banner" : "Create New Banner"}
               </h2>
               <button
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm rounded-lg hover:bg-white transition"
-                title="Close form (Esc)"
+                onClick={closeForm}
+                aria-label="Close form"
+                className="text-gray-400 hover:text-gray-700 text-lg leading-none transition-colors"
               >
-                ✕ Close
+                ✕
               </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {/* Name */}
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+              {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="banner-name" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Banner Name <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="banner-name"
                   type="text"
-                  value={formData.name || ""}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={formData.name ?? ""}
+                  onChange={(e) => patch({ name: e.target.value })}
                   placeholder="e.g., Summer Promotion, Newsletter Signup"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className={inputCls(invalid("name"))}
                 />
+                {invalid("name") && <p className="mt-1 text-xs text-red-500">Banner name is required.</p>}
               </div>
 
-              {/* Location Selection */}
+              {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <MapPin size={16} />
+                <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <MapPin size={14} aria-hidden="true" />
                   Banner Location <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                </p>
+                <div className="grid grid-cols-3 gap-3">
                   {LOCATION_OPTIONS.map((loc) => (
                     <button
                       key={loc.id}
-                      onClick={() =>
-                        setFormData({ ...formData, location: loc.id as any })
-                      }
+                      type="button"
+                      onClick={() => patch({ location: loc.id as Banner["location"] })}
                       className={`p-3 border-2 rounded-lg text-center transition ${
                         formData.location === loc.id
                           ? "border-teal-600 bg-teal-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      <div className="text-2xl mb-2">{loc.icon}</div>
-                      <div className="text-xs font-medium text-gray-900">
-                        {loc.label}
-                      </div>
+                      <div className="text-2xl mb-1">{loc.icon}</div>
+                      <div className="text-xs font-medium text-gray-900">{loc.label}</div>
                     </button>
                   ))}
                 </div>
@@ -246,16 +217,16 @@ export function BannerManagementPage() {
 
               {/* Placement */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  <LayoutTemplate size={16} />
+                <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <LayoutTemplate size={14} aria-hidden="true" />
                   Content Placement <span className="text-red-500">*</span>
-                </label>
+                </p>
                 <div className="space-y-2">
-                  {PLACEMENT_OPTIONS.map((placement) => (
+                  {PLACEMENT_OPTIONS.map((pl) => (
                     <label
-                      key={placement.id}
+                      key={pl.id}
                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition ${
-                        formData.placement === placement.id
+                        formData.placement === pl.id
                           ? "border-teal-600 bg-teal-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
@@ -263,255 +234,197 @@ export function BannerManagementPage() {
                       <input
                         type="radio"
                         name="placement"
-                        value={placement.id}
-                        checked={formData.placement === placement.id}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            placement: e.target.value as any,
-                          })
-                        }
+                        value={pl.id}
+                        checked={formData.placement === pl.id}
+                        onChange={(e) => patch({ placement: e.target.value as Banner["placement"] })}
                         className="mt-1 text-teal-600"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">
-                          {placement.label}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {placement.description}
-                        </div>
+                        <p className="text-sm font-medium text-gray-900">{pl.label}</p>
+                        <p className="text-xs text-gray-500">{pl.description}</p>
                       </div>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-6">
-                {/* Start Date */}
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Clock size={16} />
+                  <label htmlFor="banner-start-date" className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Clock size={14} aria-hidden="true" />
                     Start Date <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="banner-start-date"
                     type="date"
-                    value={formData.startDate || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startDate: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={formData.startDate ?? ""}
+                    onChange={(e) => patch({ startDate: e.target.value })}
+                    className={inputCls(invalid("startDate"))}
                   />
+                  {invalid("startDate") && <p className="mt-1 text-xs text-red-500">Start date is required.</p>}
                 </div>
-
-                {/* End Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Clock size={16} />
+                  <label htmlFor="banner-end-date" className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Clock size={14} aria-hidden="true" />
                     End Date <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="banner-end-date"
                     type="date"
-                    value={formData.endDate || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endDate: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={formData.endDate ?? ""}
+                    onChange={(e) => patch({ endDate: e.target.value })}
+                    className={inputCls(invalid("endDate"))}
                   />
+                  {invalid("endDate") && <p className="mt-1 text-xs text-red-500">End date is required.</p>}
                 </div>
               </div>
 
-              {/* Time Range (Optional) */}
-              <div className="grid grid-cols-2 gap-6">
+              {/* Times (optional) */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Start Time (Optional)
+                  <label htmlFor="banner-start-time" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Start Time <span className="text-xs font-normal text-gray-400">(optional)</span>
                   </label>
                   <input
+                    id="banner-start-time"
                     type="time"
-                    value={formData.startTime || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startTime: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={formData.startTime ?? ""}
+                    onChange={(e) => patch({ startTime: e.target.value })}
+                    className={`${baseInput} border-gray-300`}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Banner will display between these times
-                  </p>
+                  <p className="mt-1 text-xs text-gray-400">Banner shows between these times each day</p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    End Time (Optional)
+                  <label htmlFor="banner-end-time" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    End Time <span className="text-xs font-normal text-gray-400">(optional)</span>
                   </label>
                   <input
+                    id="banner-end-time"
                     type="time"
-                    value={formData.endTime || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endTime: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={formData.endTime ?? ""}
+                    onChange={(e) => patch({ endTime: e.target.value })}
+                    className={`${baseInput} border-gray-300`}
                   />
                 </div>
               </div>
 
               {/* Content */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="banner-content" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Banner Content <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  value={formData.content || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
-                  }
+                  id="banner-content"
+                  value={formData.content ?? ""}
+                  onChange={(e) => patch({ content: e.target.value })}
                   placeholder="Enter banner text, HTML, or describe the content"
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className={inputCls(invalid("content"))}
                 />
+                {invalid("content") && <p className="mt-1 text-xs text-red-500">Banner content is required.</p>}
               </div>
 
-              {/* Image URL (Optional) */}
+              {/* Image URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image URL (Optional)
+                <label htmlFor="banner-image-url" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Image URL <span className="text-xs font-normal text-gray-400">(optional)</span>
                 </label>
                 <input
+                  id="banner-image-url"
                   type="url"
-                  value={formData.imageUrl || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }
+                  value={formData.imageUrl ?? ""}
+                  onChange={(e) => patch({ imageUrl: e.target.value })}
                   placeholder="https://example.com/banner.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className={`${baseInput} border-gray-300`}
                 />
-              </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition"
-                  >
-                    {editingId ? "Update Banner" : "Create Banner"}
-                  </button>
-                </div>
               </div>
             </div>
 
-            {/* Sticky Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end">
-              <p className="text-xs text-gray-500">Press <kbd className="px-2 py-1 bg-gray-100 rounded">Esc</kbd> to close</p>
+            {/* Sticky footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center gap-3 justify-between">
+              <p className="text-xs text-gray-400">
+                Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">Esc</kbd> to close
+              </p>
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={closeForm}>Cancel</Button>
+                <Button variant="primary" onClick={handleSave}>
+                  {editingId ? "Update Banner" : "Create Banner"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Banners List */}
+        {/* ── Banners List ── */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Active Banners</h2>
+          <h2 className="text-base font-semibold text-gray-900">All Banners</h2>
+
           {banners.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-              <AlertCircle size={32} className="mx-auto mb-3 text-gray-400" />
-              <p className="text-gray-600 text-sm">No banners created yet</p>
-            </div>
+            <EmptyState
+              icon={Megaphone}
+              title="No banners yet"
+              subtitle="Create your first banner to get started."
+              action={{ label: "Create Banner", variant: "primary", icon: Plus, onClick: openAdd }}
+            />
           ) : (
             <div className="grid gap-4">
               {banners.map((banner) => (
                 <div
                   key={banner.id}
-                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition"
+                  className="border border-gray-200 rounded-xl p-5 hover:shadow-sm transition-shadow bg-white"
                 >
-                  {/* Header Row */}
+                  {/* Header */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {banner.name}
-                        </h3>
-                        <span
-                          className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
-                            banner.isActive
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {banner.isActive ? "✓ Active" : "○ Inactive"}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">{banner.name}</h3>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          banner.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {banner.isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {banner.content}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{banner.content}</p>
                     </div>
                     <button
-                      onClick={() => toggleBannerStatus(banner.id)}
-                      className="text-gray-400 hover:text-gray-600"
+                      onClick={() => toggleStatus(banner.id)}
+                      aria-label={banner.isActive ? `Deactivate ${banner.name}` : `Activate ${banner.name}`}
+                      className="ml-3 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                     >
-                      {banner.isActive ? (
-                        <ToggleRight size={24} className="text-teal-600" />
-                      ) : (
-                        <ToggleLeft size={24} />
-                      )}
+                      {banner.isActive
+                        ? <ToggleRight size={24} className="text-teal-600" />
+                        : <ToggleLeft  size={24} />
+                      }
                     </button>
                   </div>
 
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-xs font-medium text-gray-600 uppercase">
-                        Location
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium mt-1">
-                        {getLocationLabel(banner.location)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-600 uppercase">
-                        Placement
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium mt-1">
-                        {getPlacementLabel(banner.placement)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-600 uppercase">
-                        Schedule
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium mt-1">
-                        {banner.startDate} → {banner.endDate}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-600 uppercase">
-                        Time
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium mt-1">
-                        {banner.startTime ? `${banner.startTime}-${banner.endTime || "23:59"}` : "All day"}
-                      </p>
-                    </div>
+                  {/* Details */}
+                  <div className="grid grid-cols-4 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                    {[
+                      { label: "Location",  value: getLocationLabel(banner.location)  },
+                      { label: "Placement", value: getPlacementLabel(banner.placement) },
+                      { label: "Schedule",  value: `${banner.startDate} → ${banner.endDate}` },
+                      { label: "Time",      value: banner.startTime ? `${banner.startTime}–${banner.endTime ?? "23:59"}` : "All day" },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+                        <p className="text-xs font-medium text-gray-800 mt-0.5 truncate">{value}</p>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Actions */}
                   <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={() => handleEdit(banner)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <Edit2 size={16} />
+                    <Button variant="secondary" size="sm" icon={Edit2} onClick={() => openEdit(banner)}>
                       Edit
-                    </button>
-                    <button
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <Eye size={16} />
+                    </Button>
+                    <Button variant="secondary" size="sm" icon={Eye}>
                       Preview
-                    </button>
-                    <button
-                      onClick={() => handleDelete(banner.id)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-lg hover:bg-red-100 transition"
-                    >
-                      <Trash2 size={16} />
+                    </Button>
+                    <Button variant="danger" size="sm" icon={Trash2} onClick={() => handleDelete(banner)}>
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -519,6 +432,9 @@ export function BannerManagementPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog state={confirm} onClose={() => setConfirm(null)} />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

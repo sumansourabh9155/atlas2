@@ -8,6 +8,9 @@ import {
   Plus, Search, ChevronDown, ArrowUpDown, MoreVertical,
   Building2, Users, CheckCircle2,
 } from "lucide-react";
+import { SiteStatusBadge } from "../ui/StatusBadge";
+import { IconButton } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 
 /* ── State abbreviations ─────────────────────────────────────────────────── */
 const STATE_ABBR: Record<string, string> = {
@@ -138,14 +141,6 @@ const GROUPS: BusinessGroup[] = [
   },
 ];
 
-/* ── Status badge config ─────────────────────────────────────────────────── */
-
-const STATUS_STYLES: Record<SiteStatus, { badge: string; dot: string; label: string }> = {
-  published:   { badge: "bg-teal-50 text-teal-700",   dot: "bg-emerald-400", label: "Published"   },
-  scheduled:   { badge: "bg-amber-50 text-amber-700", dot: "bg-orange-400",  label: "Scheduled"   },
-  draft:       { badge: "bg-red-50 text-red-600",     dot: "bg-red-400",     label: "Draft"       },
-  live_domain: { badge: "bg-blue-50 text-blue-700",   dot: "bg-blue-400",    label: "Live Domain" },
-};
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 
@@ -344,8 +339,10 @@ export function GroupsPage() {
                       <input
                         type="checkbox"
                         checked={selectedRows.size === paginated.length && paginated.length > 0}
+                        disabled={paginated.length === 0}
                         onChange={toggleAll}
-                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Select all sites"
                       />
                     </th>
                     {COLS.map(({ key, label }) => (
@@ -365,7 +362,6 @@ export function GroupsPage() {
 
                 <tbody>
                   {paginated.length > 0 ? paginated.map((m, idx) => {
-                    const s = STATUS_STYLES[m.status];
                     return (
                       <tr
                         key={m.id}
@@ -380,39 +376,32 @@ export function GroupsPage() {
                             checked={selectedRows.has(m.id)}
                             onChange={() => toggleRow(m.id)}
                             className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                            aria-label={`Select ${m.name}`}
                           />
                         </td>
                         <td className="px-4 py-3.5 font-medium text-gray-900 truncate">{m.name}</td>
                         <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${s.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-                            {s.label}
-                          </span>
+                          <SiteStatusBadge status={m.status} />
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            m.memberType === "Primary"
-                              ? "bg-teal-50 text-teal-700 border border-teal-200"
-                              : "bg-gray-100 text-gray-600"
-                          }`}>
+                          <Badge variant={m.memberType === "Primary" ? "primary" : "neutral"} bordered>
                             {m.memberType}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-4 py-3.5 text-gray-600 truncate">{m.businessType}</td>
                         <td className="px-4 py-3.5 text-gray-600 truncate">{m.city}</td>
                         <td className="px-4 py-3.5 text-gray-600 font-medium">{abbr(m.state)}</td>
                         <td className="px-4 py-3.5 pr-6 text-right">
-                          <button className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">
-                            <MoreVertical size={14} className="text-gray-400" />
-                          </button>
+                          <IconButton icon={MoreVertical} label={`Actions for ${m.name}`} />
                         </td>
                       </tr>
                     );
                   }) : (
                     <tr>
                       <td colSpan={8} className="py-16 text-center text-sm text-gray-400">
+                        <Building2 size={28} className="mx-auto mb-2 text-gray-300" aria-hidden="true" />
                         {group.members.length === 0
-                          ? "No sites in this group yet — click \"Create Group\" to get started."
+                          ? "No sites in this group yet."
                           : "No sites match your search."}
                       </td>
                     </tr>
@@ -441,16 +430,16 @@ export function GroupsPage() {
                   </select>
                 </span>
                 {[
-                  { label: "«", action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
-                  { label: "‹", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "«", ariaLabel: "First page",    action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
+                  { label: "‹", ariaLabel: "Previous page", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
+                ].map(({ label, ariaLabel, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={ariaLabel}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>
                 ))}
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setCurrentPage(p)}
+                  <button key={p} onClick={() => setCurrentPage(p)} aria-label={`Page ${p}`} aria-current={p === currentPage ? "page" : undefined}
                     className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition ${
                       p === currentPage ? "bg-teal-600 text-white border border-teal-600" : "border border-gray-200 text-gray-600 hover:bg-gray-50"
                     }`}>
@@ -458,10 +447,10 @@ export function GroupsPage() {
                   </button>
                 ))}
                 {[
-                  { label: "›", action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
-                  { label: "»", action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "›", ariaLabel: "Next page",  action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
+                  { label: "»", ariaLabel: "Last page",  action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
+                ].map(({ label, ariaLabel, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={ariaLabel}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>

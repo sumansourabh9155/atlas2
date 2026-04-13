@@ -6,8 +6,11 @@
 import React, { useState } from "react";
 import {
   Plus, Search, ChevronDown, ArrowUpDown, MoreVertical,
-  CheckCircle2, Globe, Building2, MapPin,
+  Globe, Building2, MapPin,
 } from "lucide-react";
+import { SiteStatusBadge } from "../ui/StatusBadge";
+import { IconButton } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 
 /* ── State abbreviations ─────────────────────────────────────────────────── */
 const STATE_ABBR: Record<string, string> = {
@@ -144,15 +147,6 @@ const NETWORKS: MultiSiteNetwork[] = [
   },
 ];
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-const STATUS_STYLES: Record<LocationStatus, { badge: string; dot: string; label: string }> = {
-  published:   { badge: "bg-teal-50 text-teal-700",   dot: "bg-emerald-400", label: "Published"   },
-  scheduled:   { badge: "bg-amber-50 text-amber-700", dot: "bg-orange-400",  label: "Scheduled"   },
-  draft:       { badge: "bg-red-50 text-red-600",     dot: "bg-red-400",     label: "Draft"       },
-  live_domain: { badge: "bg-blue-50 text-blue-700",   dot: "bg-blue-400",    label: "Live Domain" },
-};
-
 /* ── Component ───────────────────────────────────────────────────────────── */
 
 export function MultiLocationPage() {
@@ -256,6 +250,7 @@ export function MultiLocationPage() {
                   </span>
                   <button
                     onClick={(e) => e.stopPropagation()}
+                    aria-label={`Actions for ${net.name}`}
                     className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition text-gray-400"
                   >
                     <MoreVertical size={14} />
@@ -299,7 +294,7 @@ export function MultiLocationPage() {
         {/* Toolbar */}
         <div className="px-6 py-3 flex items-center gap-3 flex-shrink-0">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} aria-hidden="true" />
             <input
               type="text"
               placeholder="Search locations…"
@@ -348,8 +343,10 @@ export function MultiLocationPage() {
                       <input
                         type="checkbox"
                         checked={selectedRows.size === paginated.length && paginated.length > 0}
+                        disabled={paginated.length === 0}
                         onChange={toggleAll}
-                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Select all locations"
                       />
                     </th>
                     {COLS.map(({ key, label }) => (
@@ -368,55 +365,45 @@ export function MultiLocationPage() {
                 </thead>
 
                 <tbody>
-                  {paginated.length > 0 ? paginated.map((loc, idx) => {
-                    const s = STATUS_STYLES[loc.status];
-                    return (
-                      <tr
-                        key={loc.id}
-                        style={{ height: "55px" }}
-                        className={`border-b border-gray-100 hover:bg-teal-50/30 transition-colors ${
-                          idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3.5">
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.has(loc.id)}
-                            onChange={() => toggleRow(loc.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
-                          />
-                        </td>
-                        <td className="px-4 py-3.5 font-medium text-gray-900 truncate">{loc.name}</td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${s.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-                            {s.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            loc.role === "Parent"
-                              ? "bg-teal-50 text-teal-700 border border-teal-200"
-                              : "bg-gray-100 text-gray-600"
-                          }`}>
-                            {loc.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-gray-600 truncate">{loc.businessType}</td>
-                        <td className="px-4 py-3.5 text-gray-600 truncate">{loc.city}</td>
-                        <td className="px-4 py-3.5 text-gray-600 font-medium">{abbr(loc.state)}</td>
-                        <td className="px-4 py-3.5 pr-6 text-right">
-                          <button className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">
-                            <MoreVertical size={14} className="text-gray-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  }) : (
+                  {paginated.length > 0 ? paginated.map((loc, idx) => (
+                    <tr
+                      key={loc.id}
+                      style={{ height: "55px" }}
+                      className={`border-b border-gray-100 hover:bg-teal-50/30 transition-colors ${
+                        idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                      }`}
+                    >
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(loc.id)}
+                          onChange={() => toggleRow(loc.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                          aria-label={`Select ${loc.name}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-gray-900 truncate">{loc.name}</td>
+                      <td className="px-4 py-3.5">
+                        <SiteStatusBadge status={loc.status} />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant={loc.role === "Parent" ? "primary" : "neutral"} bordered>
+                          {loc.role}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-600 truncate">{loc.businessType}</td>
+                      <td className="px-4 py-3.5 text-gray-600 truncate">{loc.city}</td>
+                      <td className="px-4 py-3.5 text-gray-600 font-medium">{abbr(loc.state)}</td>
+                      <td className="px-4 py-3.5 pr-6 text-right">
+                        <IconButton icon={MoreVertical} label={`Actions for ${loc.name}`} />
+                      </td>
+                    </tr>
+                  )) : (
                     <tr>
                       <td colSpan={8} className="py-16 text-center text-sm text-gray-400">
+                        <Building2 size={28} className="mx-auto mb-2 text-gray-300" aria-hidden="true" />
                         {network.locations.length === 0
-                          ? "No locations yet — click \"Add Location\" to add the first one."
+                          ? "No locations yet."
                           : "No locations match your search."}
                       </td>
                     </tr>
@@ -425,7 +412,7 @@ export function MultiLocationPage() {
               </table>
             </div>
 
-            {/* Pagination — inside card border */}
+            {/* Pagination */}
             <div className="px-5 py-3 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
               <p className="text-xs text-gray-500">
                 Page <span className="font-semibold text-gray-700">{currentPage}</span> of{" "}
@@ -445,16 +432,16 @@ export function MultiLocationPage() {
                   </select>
                 </span>
                 {[
-                  { label: "«", action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
-                  { label: "‹", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "«", ariaLabel: "First page",    action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
+                  { label: "‹", ariaLabel: "Previous page", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
+                ].map(({ label, ariaLabel, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={ariaLabel}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>
                 ))}
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setCurrentPage(p)}
+                  <button key={p} onClick={() => setCurrentPage(p)} aria-label={`Page ${p}`} aria-current={p === currentPage ? "page" : undefined}
                     className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition ${
                       p === currentPage ? "bg-teal-600 text-white border border-teal-600" : "border border-gray-200 text-gray-600 hover:bg-gray-50"
                     }`}>
@@ -462,10 +449,10 @@ export function MultiLocationPage() {
                   </button>
                 ))}
                 {[
-                  { label: "›", action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
-                  { label: "»", action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "›", ariaLabel: "Next page", action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
+                  { label: "»", ariaLabel: "Last page", action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
+                ].map(({ label, ariaLabel, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={ariaLabel}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>

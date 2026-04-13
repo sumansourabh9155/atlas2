@@ -250,8 +250,8 @@ function AppRouter() {
       <Route element={<AppLayout activeRole={activeRole} onRoleChange={setActiveRole} />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard"               element={<DashboardPage />} />
-        <Route path="/insights/ab-testing" element={<ABTestingPage />} />
-        <Route path="/insights/funnels"    element={<ConversionFunnelsPage />} />
+        <Route path="/insights/ab-testing" element={<ABTestingPage userRole={activeRole} />} />
+        <Route path="/insights/funnels"    element={<ConversionFunnelsPage userRole={activeRole} />} />
         <Route path="/sites"               element={<Navigate to="/sites/all" replace />} />
         <Route path="/sites/all"           element={<SiteListPage />} />
         <Route path="/sites/groups"        element={<GroupsPage />} />
