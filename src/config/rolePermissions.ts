@@ -16,8 +16,8 @@ export type DemoRole = "admin" | "manager" | "custom";
  */
 export const ROLE_BLOCKED_PATHS: Record<DemoRole, string[]> = {
   admin:   ["/my-submissions"],
-  manager: ["/my-submissions"],
-  custom:  ["/approvals", "/users"],
+  manager: ["/my-submissions", "/settings"],
+  custom:  ["/approvals", "/users", "/insights", "/settings"],
 };
 
 /**
@@ -27,7 +27,7 @@ export const ROLE_BLOCKED_PATHS: Record<DemoRole, string[]> = {
 export const ROLE_HIDDEN_NAV_IDS: Record<DemoRole, Set<string>> = {
   admin:   new Set(["my-submissions"]),
   manager: new Set(["my-submissions", "settings"]),
-  custom:  new Set(["approval-flow", "user-management", "settings"]),
+  custom:  new Set(["approval-flow", "user-management", "settings", "insights-ab-testing", "insights-funnels"]),
 };
 
 /** Returns true if the given pathname is blocked for the given role. */

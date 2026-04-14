@@ -35,6 +35,8 @@ import {
 import { ReviewModeProvider } from "../../context/ReviewModeContext";
 import { HospitalSetupPage } from "../HospitalSetup/HospitalSetupPage";
 import type { FieldChange } from "../../lib/approval/diffGenerator";
+import { useApproval } from "../../context/ApprovalContext";
+import type { ClinicVersionV2 } from "../../context/ApprovalContext";
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
 
@@ -46,113 +48,6 @@ interface ReviewPageState {
   submissionId?: string;
 }
 
-/* ─── Mock Field Changes ─────────────────────────────────────────────────────── */
-// In a real app these come from ApprovalContext.getWorkflow(clinicId).pendingApproval.fieldChanges
-
-const MOCK_CHANGES_ADMIN: FieldChange[] = [
-  {
-    id: "fc-1",
-    path: "general.name",
-    section: "general",
-    previousValue: "Happy Paws Veterinary",
-    updatedValue:  "Happy Paws Specialty Clinic",
-    label: "Clinic Name",
-    humanSummary: 'Clinic Name: "Happy Paws Veterinary" → "Happy Paws Specialty Clinic"',
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-  },
-  {
-    id: "fc-2",
-    path: "general.tagline",
-    section: "general",
-    previousValue: "Your Pet's Health is Our Priority",
-    updatedValue:  "Specialty Vet Care & Emergency Services",
-    label: "Tagline",
-    humanSummary: "Tagline: updated",
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-  },
-  {
-    id: "fc-3",
-    path: "general.primaryColor",
-    section: "general",
-    previousValue: "#006B5D",
-    updatedValue:  "#0284C7",
-    label: "Primary Color",
-    humanSummary: "Primary Color: changed",
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-    adminFeedback: "Please verify this matches our brand guidelines — confirm with design team.",
-  },
-  {
-    id: "fc-4",
-    path: "contact.phone",
-    section: "contact",
-    previousValue: "+1-555-1234",
-    updatedValue:  "+1-555-5678",
-    label: "Main Phone",
-    humanSummary: 'Main Phone: "+1-555-1234" → "+1-555-5678"',
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-  },
-  {
-    id: "fc-5",
-    path: "contact.emergencyPhone",
-    section: "contact",
-    previousValue: "+1-555-9999",
-    updatedValue:  "+1-555-8888",
-    label: "Emergency Phone",
-    humanSummary: "Emergency Phone: changed",
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-  },
-];
-
-const MOCK_CHANGES_REVISE: FieldChange[] = [
-  {
-    id: "fc-r1",
-    path: "general.name",
-    section: "general",
-    previousValue: "Urban Pet Care",
-    updatedValue:  "Urban Pet Care & Wellness",
-    label: "Clinic Name",
-    humanSummary: 'Clinic Name: "Urban Pet Care" → "Urban Pet Care & Wellness"',
-    changeType: "updated",
-    dataType: "string",
-    status: "rejected",
-    adminFeedback: "Please use the official registered business name only. Confirm with the legal team before updating.",
-  },
-  {
-    id: "fc-r2",
-    path: "contact.phone",
-    section: "contact",
-    previousValue: "+1-555-2222",
-    updatedValue:  "+1-555-2224",
-    label: "Main Phone",
-    humanSummary: "Main Phone: changed",
-    changeType: "updated",
-    dataType: "string",
-    status: "rejected",
-    adminFeedback: "Verify this number with the clinic manager — the old number is still in service.",
-  },
-  {
-    id: "fc-r3",
-    path: "contact.email",
-    section: "contact",
-    previousValue: "contact@urbanpet.com",
-    updatedValue:  "info@urbanpetcare.com",
-    label: "Email Address",
-    humanSummary: "Email: updated",
-    changeType: "updated",
-    dataType: "string",
-    status: "pending",
-  },
-];
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────────── */
 
@@ -190,15 +85,28 @@ export function ApprovalReviewPage() {
   const location = useLocation();
   const state    = (location.state ?? {}) as ReviewPageState;
 
-  const mode:       ReviewMode = state.mode       ?? "custom-revise";
-  const clinicName: string     = state.clinicName ?? (mode === "admin-review" ? "Happy Paws Specialty" : "Urban Pet Care");
-  const versionId:  string     = state.submissionId ?? "v-demo";
+  const { pendingApprovals, approveChanges, rejectChanges, workflows } = useApproval();
+
+  const mode:      ReviewMode = state.mode       ?? "custom-revise";
+  const versionId: string     = state.submissionId ?? "v-demo";
 
   const isAdminReview = mode === "admin-review";
   const backPath      = isAdminReview ? "/approvals"      : "/my-submissions";
   const backLabel     = isAdminReview ? "Approval Flow"   : "My Submissions";
 
-  const fieldChanges = isAdminReview ? MOCK_CHANGES_ADMIN : MOCK_CHANGES_REVISE;
+  // Find submission: check pending list first, then approval history (for rejected/revise flows)
+  const submission: ClinicVersionV2 | undefined =
+    (pendingApprovals.find((p) => p.id === versionId) as ClinicVersionV2 | undefined) ??
+    Array.from(workflows.values())
+      .flatMap((wf) => wf.approvalHistory as ClinicVersionV2[])
+      .find((v) => v.id === versionId);
+
+  const clinicName: string =
+    state.clinicName ??
+    submission?.changes?.general?.name ??
+    (mode === "admin-review" ? "Happy Paws Specialty" : "Urban Pet Care");
+
+  const fieldChanges: FieldChange[] = submission?.fieldChanges ?? [];
   const grouped      = groupBySection(fieldChanges);
 
   const totalRejected = fieldChanges.filter((c) => c.status === "rejected").length;
@@ -216,11 +124,20 @@ export function ApprovalReviewPage() {
   }
 
   function handleApproveAll() {
+    if (!window.confirm("Approve all changes for this submission?")) return;
+    approveChanges(versionId, "", "admin");
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
       navigate("/approvals");
     }, 2500);
+  }
+
+  function handleRequestChanges() {
+    const feedback = window.prompt("Describe the changes needed:");
+    if (!feedback?.trim()) return;
+    rejectChanges(versionId, feedback.trim(), "admin");
+    navigate("/approvals");
   }
 
   function handleSubmitRevision() {
@@ -229,6 +146,30 @@ export function ApprovalReviewPage() {
       setShowToast(false);
       navigate("/my-submissions");
     }, 2500);
+  }
+
+  /* ─── Not-found guard (submission processed or page refreshed) ── */
+  if (!submission) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-xs">
+          <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={20} className="text-amber-500" aria-hidden="true" />
+          </div>
+          <p className="text-sm font-semibold text-gray-800">Submission not found</p>
+          <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+            This submission may have already been approved, rejected, or the page was refreshed.
+          </p>
+          <button
+            onClick={() => navigate(backPath)}
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            <ArrowLeft size={13} aria-hidden="true" />
+            {backLabel}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   /* ─── Render ── */
@@ -281,7 +222,7 @@ export function ApprovalReviewPage() {
           {isAdminReview ? (
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
-                onClick={() => navigate("/approvals")}
+                onClick={handleRequestChanges}
                 className="px-3.5 py-1.5 text-sm font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
               >
                 Request Changes

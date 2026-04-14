@@ -20,7 +20,7 @@ export function ApprovalFlowPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [sampleDataLoaded, setSampleDataLoaded] = useState(false);
 
-  const { pendingApprovals, workflows, getFeedback, addFeedback, approveChanges, submitForApprovalWithDiff } =
+  const { pendingApprovals, workflows, getFeedback, addFeedback, approveChanges, resolveFeedback, submitForApprovalWithDiff } =
     useApproval();
 
   // Initialize with sample data for demonstration
@@ -140,7 +140,7 @@ export function ApprovalFlowPage() {
       };
 
       // Submit the first pending approval with diff (passing base clinic for proper comparison)
-      const v1 = submitForApprovalWithDiff("Austin Paws Specialty Clinic", pendingClinicV2 as unknown as ClinicWebsite, "john.doe", baseClinicV1 as unknown as ClinicWebsite);
+      const v1 = submitForApprovalWithDiff(pendingClinicV2.general.name, pendingClinicV2 as unknown as ClinicWebsite, "john.doe", baseClinicV1 as unknown as ClinicWebsite);
 
       // Add feedback to first approval
       if (v1) {
@@ -359,13 +359,15 @@ export function ApprovalFlowPage() {
     <div className="flex-1 overflow-hidden bg-white flex flex-col">
       <div className="p-10 overflow-y-auto flex-1">
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-gray-200 mb-8">
+        <div role="tablist" aria-label="Approval sections" className="flex gap-4 border-b border-gray-200 mb-8">
           {[
             { id: "pending" as const, label: "Pending Approvals", count: pendingApprovals.length },
             { id: "history" as const, label: "History", count: allApproved.length },
           ].map((tab) => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition border-b-2 ${
                 activeTab === tab.id
@@ -439,7 +441,7 @@ export function ApprovalFlowPage() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex gap-5 flex-1">
-                      <div className="w-10 h-10 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0 mt-1">
+                      <div className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 mt-1 ${approval.status === "approved" ? "bg-emerald-50" : "bg-red-50"}`}>
                         <CheckCircle
                           size={20}
                           className={
@@ -588,9 +590,7 @@ export function ApprovalFlowPage() {
                 </div>
                 <FeedbackThread
                   feedback={getFeedback(selectedPendingV2.id)}
-                  onResolveFeedback={(feedbackId) => {
-                    // This would be implemented with context method in Phase 4
-                  }}
+                  onResolveFeedback={(feedbackId) => resolveFeedback(feedbackId)}
                 />
               </div>
             </div>
@@ -605,6 +605,7 @@ export function ApprovalFlowPage() {
               </button>
               <button
                 onClick={() => {
+                  if (!window.confirm("Approve all changes for this submission?")) return;
                   approveChanges(selectedPendingV2.id, "", "admin");
                   setShowDetailModal(false);
                 }}

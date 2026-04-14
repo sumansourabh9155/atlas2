@@ -30,6 +30,7 @@ import {
   type RouteConfig,
 } from "../config/routes.config";
 import { useLayout } from "../context/LayoutContext";
+import { type DemoRole, ROLE_HIDDEN_NAV_IDS } from "../config/rolePermissions";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 
@@ -46,8 +47,6 @@ interface UserFlyoutState {
 }
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
-
-type DemoRole = "admin" | "manager" | "custom";
 
 interface LeftNavigationProps {
   approvalCount?:      number;
@@ -282,14 +281,6 @@ export function LeftNavigation({
     );
   };
 
-  /* ── Role-based nav visibility ────────────────────────────────────────── */
-  // Routes each role should NOT see in the sidebar
-  const HIDDEN_BY_ROLE: Record<DemoRole, Set<string>> = {
-    admin:   new Set(["my-submissions"]),                                     // Admin doesn't submit — they approve
-    manager: new Set(["my-submissions", "settings"]),                         // Manager doesn't submit; no settings access
-    custom:  new Set(["approval-flow", "user-management", "settings", "insights-ab-testing", "insights-funnels", ]),  // Custom: no approvals, users, settings, or analytics
-  };
-
   /* ── Section ─────────────────────────────────────────────────────────── */
   const Section = ({
     title,
@@ -298,7 +289,7 @@ export function LeftNavigation({
     title:   string;
     section: RouteConfig["navSection"];
   }) => {
-    const hidden = HIDDEN_BY_ROLE[userRole];
+    const hidden = ROLE_HIDDEN_NAV_IDS[userRole];
     let items = getNavSection(section);
     items = items.filter((r) => !hidden.has(r.id));
     if (!items.length) return null;

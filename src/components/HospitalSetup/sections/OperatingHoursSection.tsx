@@ -1,5 +1,7 @@
 import { Clock } from "lucide-react";
 import { OperatingHoursEditor, type WeekSchedule } from "../ui/OperatingHoursEditor";
+import { useReviewMode } from "../../../context/ReviewModeContext";
+import { FieldReviewHint } from "../../ui/FieldReviewHint";
 
 interface Props {
   value?: WeekSchedule;
@@ -7,6 +9,7 @@ interface Props {
 }
 
 export function OperatingHoursSection({ value, onChange }: Props) {
+  const reviewMode = useReviewMode();
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5">
       {/* Header */}
@@ -25,11 +28,14 @@ export function OperatingHoursSection({ value, onChange }: Props) {
         </div>
       </div>
 
-      <OperatingHoursEditor
-        value={value}
-        onChange={onChange}
-        name="businessHours"
-      />
+      <div className={reviewMode.getFieldHighlightClass("contact.businessHours")}>
+        <OperatingHoursEditor
+          value={value}
+          onChange={onChange}
+          name="businessHours"
+        />
+      </div>
+      <FieldReviewHint path="contact.businessHours" />
 
       {/* Tip */}
       <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-lg">

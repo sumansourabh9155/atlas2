@@ -14,13 +14,16 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { findRouteByPath } from "../../config/routes.config";
 import { useLayout } from "../../context/LayoutContext";
+import type { DemoRole } from "../../config/rolePermissions";
 
 interface TopBarProps {
   /** Called when the user clicks the CTA button */
   onCTAClick: (action: string) => void;
+  /** Current user role — used to gate role-restricted CTAs */
+  activeRole: DemoRole;
 }
 
-export function TopBar({ onCTAClick }: TopBarProps) {
+export function TopBar({ onCTAClick, activeRole }: TopBarProps) {
   const { pathname }     = useLocation();
   const navigate         = useNavigate();
   const { navCollapsed } = useLayout();
@@ -95,8 +98,8 @@ export function TopBar({ onCTAClick }: TopBarProps) {
           </div>
         )}
 
-        {/* Right: CTA button */}
-        {cta && (
+        {/* Right: CTA button (hidden when role not in allowedRoles) */}
+        {cta && (!cta.allowedRoles || cta.allowedRoles.includes(activeRole)) && (
           <button
             type="button"
             onClick={() => onCTAClick(cta.action)}

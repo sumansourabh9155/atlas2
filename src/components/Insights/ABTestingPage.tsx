@@ -49,14 +49,21 @@ function WinnerBadge({ winner }: { winner: "control" | "variant" | undefined }) 
 /* ─── Create Test Modal ───────────────────────────────────────────────────── */
 
 function CreateTestModal({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep]                   = useState(1);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [showLaunchToast, setShowLaunchToast] = useState(false);
   const TOTAL = 4;
   const STEPS = ["Select Site & Page", "Choose Element", "Define Variants", "Configure Test"];
+
+  function handleLaunch() {
+    setShowLaunchToast(true);
+    setTimeout(() => { setShowLaunchToast(false); onClose(); }, 2200);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -122,7 +129,12 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
                 "Form Field Count", "Nav Call-to-Action", "Testimonial Format", "Footer CTA"].map((el) => (
                 <button
                   key={el}
-                  className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-left hover:border-teal-400 hover:bg-teal-50 transition-colors"
+                  onClick={() => setSelectedElement(el)}
+                  className={`border rounded-lg px-3 py-2.5 text-sm text-left transition-colors ${
+                    selectedElement === el
+                      ? "border-teal-500 bg-teal-50 text-teal-800 font-medium ring-1 ring-teal-400"
+                      : "border-gray-200 hover:border-teal-400 hover:bg-teal-50 text-gray-700"
+                  }`}
                 >
                   {el}
                 </button>
@@ -131,6 +143,11 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
           )}
           {step === 3 && (
             <>
+              {selectedElement && (
+                <p className="text-xs text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
+                  Testing element: <strong>{selectedElement}</strong>
+                </p>
+              )}
               <div>
                 <label className="text-xs font-semibold text-gray-600 block mb-1.5">Control (A) — current</label>
                 <input
@@ -196,12 +213,21 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
             {step > 1 ? "← Back" : "Cancel"}
           </button>
           <button
-            onClick={() => step < TOTAL ? setStep(step + 1) : onClose()}
-            className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
+            onClick={() => step < TOTAL ? setStep(step + 1) : handleLaunch()}
+            disabled={step === 2 && !selectedElement}
+            className="bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
           >
             {step < TOTAL ? "Continue →" : "Launch Test"}
           </button>
         </div>
+
+        {/* Launch success toast */}
+        {showLaunchToast && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2.5 bg-teal-600 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg whitespace-nowrap">
+            <CheckCircle2 size={15} aria-hidden="true" />
+            Test launched! Results will appear once data is collected.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -213,8 +239,9 @@ interface ABTestingPageProps { userRole?: "admin" | "manager" | "custom"; }
 
 export function ABTestingPage({ userRole }: ABTestingPageProps) {
   const navigate = useNavigate();
-  const [tab, setTab]             = useState<"active" | "completed">("active");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [tab, setTab]               = useState<"active" | "completed">("active");
+  const [modalOpen, setModalOpen]   = useState(false);
+  const [winnerDeclared, setWinnerDeclared] = useState<string | null>(null);
 
   // Role guard — custom users cannot access analytics
   useEffect(() => {
@@ -367,9 +394,22 @@ export function ABTestingPage({ userRole }: ABTestingPageProps) {
                         </div>
                       </div>
                       {test.confidence >= 95 && (
-                        <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
-                          Declare Winner
-                        </button>
+                        winnerDeclared === test.id ? (
+                          <div className="w-full flex items-center justify-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold py-2 rounded-lg">
+                            <CheckCircle2 size={12} aria-hidden="true" />
+                            Winner declared!
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (!window.confirm(`Declare the ${test.variantConvPct > test.controlConvPct ? "Variant (B)" : "Control (A)"} as winner and apply to all sites?`)) return;
+                              setWinnerDeclared(test.id);
+                            }}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                          >
+                            Declare Winner
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

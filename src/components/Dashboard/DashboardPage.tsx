@@ -21,6 +21,7 @@ import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import { FilterPill } from "../ui/FilterPill";
 import { surface, text } from "../../lib/styles/tokens";
+import { useApproval } from "../../context/ApprovalContext";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -97,8 +98,13 @@ const ACTIVITY_FEED = [
 
 /* ─── Main Component ─────────────────────────────────────────────── */
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  userRole?: "admin" | "manager" | "custom";
+}
+
+export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
   const navigate = useNavigate();
+  const { getPendingCount } = useApproval();
   const [activityFilter, setActivityFilter] = useState<ActivityType | "all">("all");
 
   const filteredActivity = activityFilter === "all"
@@ -106,7 +112,28 @@ export function DashboardPage() {
     : ACTIVITY_FEED.filter((f) => f.verb === activityFilter);
 
   const totalSites = PIPELINE_STAGES.reduce((s, p) => s + p.count, 0);
-  const criticalCount = ATTENTION_ITEMS.filter((a) => a.urgency === "critical").length;
+  const pendingCount = getPendingCount();
+
+  /* Role-aware attention items */
+  const isCustom = userRole === "custom";
+  const visibleAttentionItems = [
+    ...ATTENTION_ITEMS.filter((item) => {
+      if (isCustom && (item.path === "/approvals" || item.path === "/users")) return false;
+      return true;
+    }),
+    ...(isCustom ? [{
+      id:        "custom-submissions",
+      urgency:   "info" as UrgencyLevel,
+      icon:      Clock,
+      iconColor: "text-teal-500",
+      bg:        "bg-teal-50",
+      title:     "My Submissions",
+      detail:    "You have a pending submission awaiting admin review.",
+      cta:       "View Status",
+      path:      "/my-submissions",
+    }] : []),
+  ];
+  const criticalCount = visibleAttentionItems.filter((a) => a.urgency === "critical").length;
 
   return (
     <div className={surface.page}>
@@ -116,7 +143,7 @@ export function DashboardPage() {
         <div className="grid grid-cols-4 gap-4">
           <KpiCard label="Total Sites"       value={145} icon={Building2}    color="blue"    delta="+12 this month" deltaUp onClick={() => navigate("/sites/all")} />
           <KpiCard label="Published"         value={98}  icon={CheckCircle2} color="emerald" delta="+8 this week"   deltaUp onClick={() => navigate("/sites/all")} />
-          <KpiCard label="Pending Approvals" value={7}   icon={Clock}        color="amber"   delta="3 urgent today" deltaUp={false} onClick={() => navigate("/approvals")} />
+          <KpiCard label="Pending Approvals" value={pendingCount || 7} icon={Clock} color="amber" delta={pendingCount > 0 ? `${Math.min(pendingCount, 3)} urgent today` : "All clear"} deltaUp={false} onClick={() => navigate(isCustom ? "/my-submissions" : "/approvals")} />
           <KpiCard label="Live Domains"      value={43}  icon={Globe}        color="teal"    delta="+5 this month"  deltaUp onClick={() => navigate("/sites/all")} />
         </div>
 
@@ -136,7 +163,7 @@ export function DashboardPage() {
               }
             />
             <div className="flex-1 divide-y divide-gray-50">
-              {ATTENTION_ITEMS.map((item) => {
+              {visibleAttentionItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <div key={item.id} className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
@@ -232,28 +259,36 @@ export function DashboardPage() {
             }
           />
           <div className="px-6 py-5">
-            {/* Segmented bar */}
+            {/* Segmented bar — each segment is clickable */}
             <div className="flex rounded-full overflow-hidden h-3 bg-gray-100 gap-px">
               {PIPELINE_STAGES.map((stage) => (
-                <div
+                <button
                   key={stage.id}
-                  className={`${stage.bar} transition-all`}
+                  type="button"
+                  onClick={() => navigate("/sites/all")}
+                  className={`${stage.bar} transition-all hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal-500`}
                   style={{ width: `${stage.pct}%` }}
-                  title={`${stage.label}: ${stage.count} sites (${stage.pct}%)`}
+                  title={`${stage.label}: ${stage.count} sites (${stage.pct}%) — click to view`}
+                  aria-label={`${stage.label}: ${stage.count} sites`}
                 />
               ))}
             </div>
 
-            {/* Legend + counts */}
+            {/* Legend + counts — each entry is a clickable nav link */}
             <div className="grid grid-cols-4 mt-4 divide-x divide-gray-100">
               {PIPELINE_STAGES.map((stage) => (
-                <div key={stage.id} className="flex items-center gap-3 px-4 first:pl-0 last:pr-0">
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => navigate("/sites/all")}
+                  className="flex items-center gap-3 px-4 first:pl-0 last:pr-0 text-left hover:bg-gray-50 rounded-lg py-1 -my-1 transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                >
                   <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${stage.bar}`} />
                   <div>
-                    <p className={text.bodySmall}>{stage.label}</p>
+                    <p className={`${text.bodySmall} group-hover:text-gray-700 transition-colors`}>{stage.label}</p>
                     <p className="text-lg font-bold text-gray-900 tabular-nums leading-tight">{stage.count}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

@@ -4,6 +4,8 @@ import { Toggle } from "../ui/Toggle";
 import { DualPanelPicker } from "../ui/DualPanelPicker";
 import type { ClinicServicesConfig, ServiceGroup } from "../../../context/ClinicContext";
 import { SERVICE_PICKER_ITEMS } from "../../../data/catalogue";
+import { useReviewMode } from "../../../context/ReviewModeContext";
+import { FieldReviewHint } from "../../ui/FieldReviewHint";
 
 // ─── ServicesSection ──────────────────────────────────────────────────────────
 
@@ -13,6 +15,7 @@ interface Props {
 }
 
 export function ServicesSection({ data, onChange }: Props) {
+  const reviewMode = useReviewMode();
   // Track which groups are expanded (all open by default)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(data.serviceGroups.map((g) => g.id))
@@ -59,7 +62,7 @@ export function ServicesSection({ data, onChange }: Props) {
     <div className="flex flex-col gap-4">
 
       {/* ── Pricing document URL ── */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-teal-50 border border-teal-100 rounded-xl">
+      <div className={`flex items-center gap-3 px-4 py-3 bg-teal-50 border border-teal-100 rounded-xl ${reviewMode.getFieldHighlightClass("services.pricingUrl")}`}>
         <Info className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
         <input
           type="url"
@@ -69,6 +72,7 @@ export function ServicesSection({ data, onChange }: Props) {
           className="flex-1 text-sm text-teal-900 bg-transparent focus:outline-none placeholder:text-teal-400/70 min-w-0"
         />
       </div>
+      <FieldReviewHint path="services.pricingUrl" />
 
       {/* ── Service Pricing toggle ── */}
       <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center justify-between">
@@ -102,13 +106,16 @@ export function ServicesSection({ data, onChange }: Props) {
                 Service-{idx + 1}:
               </span>
 
-              <input
-                type="text"
-                value={group.name}
-                onChange={(e) => updateGroup(group.id, { name: e.target.value })}
-                placeholder="Group name  (e.g. Specialty)"
-                className="flex-1 h-8 px-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-500 transition-colors min-w-0"
-              />
+              <div className="flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={group.name}
+                  onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                  placeholder="Group name  (e.g. Specialty)"
+                  className={`w-full h-8 px-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-500 transition-colors ${reviewMode.getFieldHighlightClass(`services.serviceGroups[${idx}].name`)}`}
+                />
+                <FieldReviewHint path={`services.serviceGroups[${idx}].name`} />
+              </div>
 
               {/* Service count badge */}
               {selectedCount > 0 && (

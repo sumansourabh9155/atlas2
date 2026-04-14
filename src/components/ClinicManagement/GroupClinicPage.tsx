@@ -1,13 +1,19 @@
 /**
  * Group Clinic Page
- * Left rail: clinic groups | Right: member clinics table (matches ClinicListPage design)
+ * Left rail: clinic groups | Right: member clinics table
+ * Design system: SiteStatusBadge, Badge, SearchInput, RowActionMenu, ConfirmDialog, Toast
  */
 
 import React, { useState } from "react";
 import {
-  Plus, Search, ChevronDown, ArrowUpDown, MoreVertical,
-  Building2, Users, CheckCircle2,
+  Plus, ArrowUp, ArrowDown, ArrowUpDown,
+  Building2, Users, CheckCircle2, Edit2, Trash2,
+  Globe, ChevronDown,
 } from "lucide-react";
+import { SiteStatusBadge, Badge, SearchInput } from "../ui";
+import { ConfirmDialog, type ConfirmState } from "../ui/ConfirmDialog";
+import { ToastContainer, useToast } from "../ui/Toast";
+import { RowActionMenu, type RowAction } from "../ui/RowActionMenu";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
@@ -124,40 +130,128 @@ const GROUPS: ClinicGroup[] = [
   },
 ];
 
-// v2
-/* ── Status badge config — matches ClinicListPage exactly ─────────────────── */
+/* ── Local UI helpers ───────────────────────────────────────────────────────── */
 
-const STATUS_STYLES: Record<ClinicStatus, { badge: string; dot: string; label: string }> = {
-  published:   { badge: "bg-teal-50 text-teal-700",   dot: "bg-emerald-400", label: "Published"   },
-  scheduled:   { badge: "bg-amber-50 text-amber-700", dot: "bg-orange-400",  label: "Scheduled"   },
-  draft:       { badge: "bg-red-50 text-red-600",     dot: "bg-red-400",     label: "Draft"       },
-  live_domain: { badge: "bg-blue-50 text-blue-700",   dot: "bg-blue-400",    label: "Live Domain" },
-};
+type FilterVal = "all" | string;
+
+interface FilterDropdownProps {
+  label: string;
+  value: FilterVal;
+  options: { value: string; label: string }[];
+  onChange: (v: FilterVal) => void;
+}
+
+function FilterDropdown({ label, value, options, onChange }: FilterDropdownProps) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  const active = value !== "all";
+  const selectedLabel = active ? options.find((o) => o.value === value)?.label ?? label : label;
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`px-3 py-2 border rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${
+          active
+            ? "border-teal-500 bg-teal-50 text-teal-700"
+            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+        }`}
+      >
+        {selectedLabel}
+        <ChevronDown size={13} className={active ? "text-teal-500" : "text-gray-400"} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-40 min-w-[148px] bg-white border border-gray-200 rounded-xl shadow-lg py-1.5">
+          <button
+            className={`w-full text-left px-3.5 py-2 text-sm transition-colors ${value === "all" ? "font-semibold text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
+            onClick={() => { onChange("all"); setOpen(false); }}
+          >
+            {label}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              className={`w-full text-left px-3.5 py-2 text-sm transition-colors ${value === opt.value ? "font-semibold text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SortHeaderProps {
+  label: string;
+  col: keyof MemberClinic;
+  sortCol: keyof MemberClinic;
+  sortAsc: boolean;
+  onSort: (col: keyof MemberClinic) => void;
+}
+function SortHeader({ label, col, sortCol, sortAsc, onSort }: SortHeaderProps) {
+  const active = sortCol === col;
+  const Icon = active ? (sortAsc ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      onClick={() => onSort(col)}
+      className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+    >
+      {label}
+      <Icon size={11} className={active ? "text-teal-600" : "text-gray-300"} />
+    </button>
+  );
+}
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 
 export function GroupClinicPage() {
   const [selectedId, setSelectedId]     = useState("g1");
   const [searchQuery, setSearchQuery]   = useState("");
+  const [filterStatus, setFilterStatus] = useState<FilterVal>("all");
+  const [filterType,   setFilterType]   = useState<FilterVal>("all");
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage]   = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [sortCol, setSortCol]           = useState<keyof MemberClinic>("name");
   const [sortAsc, setSortAsc]           = useState(true);
+  const [confirm,    setConfirm]        = useState<ConfirmState | null>(null);
+  const { toasts, toast, dismiss }      = useToast();
 
   const group = GROUPS.find((g) => g.id === selectedId)!;
 
-  // Summary counts
-  const primaryCount  = group.members.filter((m) => m.memberType === "Primary").length;
-  const liveCount     = group.members.filter((m) => m.status === "live_domain" || m.status === "published").length;
+  const primaryCount = group.members.filter((m) => m.memberType === "Primary").length;
+  const liveCount    = group.members.filter((m) => m.status === "live_domain" || m.status === "published").length;
 
-  // Filter + sort
+  /* Unique filter options derived from current group */
+  const statusOptions = [
+    { value: "published",   label: "Published"   },
+    { value: "scheduled",   label: "Scheduled"   },
+    { value: "draft",       label: "Draft"       },
+    { value: "live_domain", label: "Live Domain" },
+  ];
+  const typeOptions = Array.from(new Set(group.members.map((m) => m.hospitalType))).sort()
+    .map((t) => ({ value: t, label: t }));
+
+  /* Filter + sort */
   const filtered = group.members
-    .filter((m) =>
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.state.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter((m) => {
+      const q = searchQuery.toLowerCase();
+      return (
+        (m.name.toLowerCase().includes(q) || m.city.toLowerCase().includes(q) || m.state.toLowerCase().includes(q)) &&
+        (filterStatus === "all" || m.status === filterStatus) &&
+        (filterType   === "all" || m.hospitalType === filterType)
+      );
+    })
     .sort((a, b) => {
       const av = String(a[sortCol]).toLowerCase();
       const bv = String(b[sortCol]).toLowerCase();
@@ -191,15 +285,29 @@ export function GroupClinicPage() {
     setCurrentPage(1);
     setSearchQuery("");
     setSelectedRows(new Set());
+    setFilterStatus("all");
+    setFilterType("all");
   };
 
+  const rowActions = (m: MemberClinic): RowAction[] => [
+    { label: "Edit",   icon: Edit2,  onClick: () => toast.success(`Editing ${m.name}`) },
+    { label: "View Live", icon: Globe, onClick: () => toast.success(`Opening ${m.name}`) },
+    { label: "Delete", icon: Trash2, onClick: () => setConfirm({
+        title:       `Remove "${m.name}"?`,
+        message:     "This clinic will be removed from the group.",
+        confirmLabel: "Remove",
+        variant:     "danger",
+        onConfirm: () => toast.success(`"${m.name}" removed from group`),
+      }), variant: "danger" },
+  ];
+
   const COLS: { key: keyof MemberClinic; label: string }[] = [
-    { key: "name",         label: "Hospital Name"  },
-    { key: "status",       label: "Status"         },
-    { key: "memberType",   label: "Member Type"    },
-    { key: "hospitalType", label: "Hospital Type"  },
-    { key: "city",         label: "City"           },
-    { key: "state",        label: "State"          },
+    { key: "name",         label: "Hospital Name" },
+    { key: "status",       label: "Status"        },
+    { key: "memberType",   label: "Member Type"   },
+    { key: "hospitalType", label: "Hospital Type" },
+    { key: "city",         label: "City"          },
+    { key: "state",        label: "State"         },
   ];
 
   return (
@@ -208,7 +316,6 @@ export function GroupClinicPage() {
       {/* ── Left Rail ─────────────────────────────────────────────────────── */}
       <div className="w-64 flex-shrink-0 border-r border-gray-200 flex flex-col overflow-hidden bg-white">
 
-        {/* Rail Header */}
         <div className="px-4 py-4 border-b border-gray-100">
           <button className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors">
             <Plus size={15} />
@@ -216,14 +323,17 @@ export function GroupClinicPage() {
           </button>
         </div>
 
-        {/* Group List */}
         <div className="flex-1 overflow-y-auto">
           {GROUPS.map((g) => {
             const active = g.id === selectedId;
             return (
               <div
                 key={g.id}
+                role="button"
+                tabIndex={0}
+                aria-pressed={active}
                 onClick={() => switchGroup(g.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") switchGroup(g.id); }}
                 className={`w-full flex items-center justify-between px-5 py-4 cursor-pointer border-b border-gray-100 transition-colors select-none ${
                   active ? "bg-teal-50 border-l-2 border-l-teal-600" : "hover:bg-gray-50"
                 }`}
@@ -231,25 +341,16 @@ export function GroupClinicPage() {
                 <span className={`text-sm font-semibold truncate pr-2 leading-snug ${active ? "text-teal-800" : "text-gray-800"}`}>
                   {g.name}
                 </span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`min-w-[26px] h-[26px] flex items-center justify-center rounded-full text-xs font-bold px-1.5 ${
-                    active ? "bg-teal-200 text-teal-800" : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {g.members.length}
-                  </span>
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 transition text-gray-400"
-                  >
-                    <MoreVertical size={14} />
-                  </button>
-                </div>
+                <span className={`min-w-[26px] h-[26px] flex items-center justify-center rounded-full text-xs font-bold px-1.5 flex-shrink-0 ${
+                  active ? "bg-teal-200 text-teal-800" : "bg-gray-100 text-gray-600"
+                }`}>
+                  {g.members.length}
+                </span>
               </div>
             );
           })}
         </div>
 
-        {/* Rail Footer */}
         <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60">
           <p className="text-xs text-gray-500">
             {GROUPS.length} groups · {GROUPS.reduce((s, g) => s + g.members.length, 0)} clinics
@@ -262,67 +363,88 @@ export function GroupClinicPage() {
 
         {/* Group Summary Bar */}
         <div className="px-6 pt-5 pb-4 flex-shrink-0 border-b border-gray-100 bg-white">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">{group.name}</h2>
-            <div className="flex items-center gap-4 mt-1">
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                <Building2 size={12} className="text-teal-500" />
-                {group.members.length} clinics
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                <CheckCircle2 size={12} className="text-teal-500" />
-                {primaryCount} primary
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                <Users size={12} className="text-teal-500" />
-                {liveCount} live
-              </span>
-            </div>
+          <h2 className="text-base font-bold text-gray-900">{group.name}</h2>
+          <div className="flex items-center gap-4 mt-1">
+            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Building2 size={12} className="text-teal-500" />
+              {group.members.length} clinics
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+              <CheckCircle2 size={12} className="text-teal-500" />
+              {primaryCount} primary
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Users size={12} className="text-teal-500" />
+              {liveCount} live
+            </span>
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="px-6 py-3 flex items-center gap-3 flex-shrink-0">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-            <input
-              type="text"
-              placeholder="Search clinics…"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            />
-          </div>
-          <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
-            All States <ChevronDown size={14} className="text-gray-400" />
-          </button>
-          <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
-            All Types <ChevronDown size={14} className="text-gray-400" />
-          </button>
-          <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
-            All Status <ChevronDown size={14} className="text-gray-400" />
-          </button>
-          {selectedRows.size > 0 && (
-            <span className="ml-auto text-xs text-teal-700 font-medium bg-teal-50 border border-teal-200 rounded-md px-2.5 py-1">
+        {/* Bulk toolbar */}
+        {selectedRows.size > 0 && (
+          <div className="px-6 py-2.5 bg-teal-50 border-b border-teal-200 flex items-center gap-3 flex-shrink-0">
+            <span className="text-sm font-semibold text-teal-800">
               {selectedRows.size} selected
             </span>
-          )}
+            <div className="h-4 w-px bg-teal-300" />
+            <button
+              onClick={() => {
+                setConfirm({
+                  title:       `Remove ${selectedRows.size} clinics?`,
+                  message:     "These clinics will be removed from the group.",
+                  confirmLabel: "Remove All",
+                  variant:     "danger",
+                  onConfirm:   () => { toast.success(`${selectedRows.size} clinics removed`); setSelectedRows(new Set()); },
+                });
+              }}
+              className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+            >
+              Remove from Group
+            </button>
+            <button
+              onClick={() => setSelectedRows(new Set())}
+              className="ml-auto text-xs text-teal-600 hover:text-teal-800 transition-colors"
+            >
+              Deselect all
+            </button>
+          </div>
+        )}
+
+        {/* Toolbar */}
+        <div className="px-6 py-3 flex items-center gap-3 flex-shrink-0 flex-wrap">
+          <SearchInput
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            placeholder="Search clinics…"
+            className="flex-1 max-w-xs"
+          />
+          <FilterDropdown
+            label="All Status"
+            value={filterStatus}
+            options={statusOptions}
+            onChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}
+          />
+          <FilterDropdown
+            label="All Types"
+            value={filterType}
+            options={typeOptions}
+            onChange={(v) => { setFilterType(v); setCurrentPage(1); }}
+          />
         </div>
 
         {/* Table Card */}
         <div className="px-6 pb-6 flex-1 flex flex-col min-h-0">
           <div className="border border-gray-200 rounded-xl overflow-hidden flex flex-col flex-1 min-h-0">
 
-            {/* Scrollable Table */}
             <div className="flex-1 overflow-auto min-h-0">
               <table className="w-full text-sm table-fixed border-collapse">
                 <colgroup>
                   <col style={{ width: "44px" }} />
                   <col style={{ width: "22%" }} />
-                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "13%" }} />
                   <col style={{ width: "9%" }} />
                   <col style={{ width: "20%" }} />
-                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "13%" }} />
                   <col style={{ width: "8%" }} />
                   <col style={{ width: "80px" }} />
                 </colgroup>
@@ -332,20 +454,16 @@ export function GroupClinicPage() {
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
+                        aria-label="Select all on this page"
                         checked={selectedRows.size === paginated.length && paginated.length > 0}
+                        disabled={paginated.length === 0}
                         onChange={toggleAll}
-                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </th>
                     {COLS.map(({ key, label }) => (
                       <th key={key} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">
-                        <button
-                          onClick={() => handleSort(key)}
-                          className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
-                        >
-                          {label}
-                          <ArrowUpDown size={11} className={sortCol === key ? "text-teal-600" : "text-gray-300"} />
-                        </button>
+                        <SortHeader label={label} col={key} sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       </th>
                     ))}
                     <th className="px-4 py-3 pr-6 text-right text-xs font-semibold text-gray-600">Actions</th>
@@ -353,56 +471,51 @@ export function GroupClinicPage() {
                 </thead>
 
                 <tbody>
-                  {paginated.length > 0 ? paginated.map((m, idx) => {
-                    const s = STATUS_STYLES[m.status];
-                    return (
-                      <tr
-                        key={m.id}
-                        style={{ height: "55px" }}
-                        className={`border-b border-gray-100 hover:bg-teal-50/30 transition-colors ${
-                          idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3.5">
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.has(m.id)}
-                            onChange={() => toggleRow(m.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
-                          />
-                        </td>
-                        <td className="px-4 py-3.5 font-medium text-gray-900 truncate">{m.name}</td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${s.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-                            {s.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            m.memberType === "Primary"
-                              ? "bg-teal-50 text-teal-700 border border-teal-200"
-                              : "bg-gray-100 text-gray-600"
-                          }`}>
-                            {m.memberType}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-gray-600">{m.hospitalType}</td>
-                        <td className="px-4 py-3.5 text-gray-600">{m.city}</td>
-                        <td className="px-4 py-3.5 text-gray-600">{m.state}</td>
-                        <td className="px-4 py-3.5 pr-6 text-right">
-                          <button className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">
-                            <MoreVertical size={14} className="text-gray-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  }) : (
+                  {paginated.length > 0 ? paginated.map((m, idx) => (
+                    <tr
+                      key={m.id}
+                      style={{ height: "55px" }}
+                      className={`border-b border-gray-100 hover:bg-teal-50/30 transition-colors ${
+                        idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                      }`}
+                    >
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${m.name}`}
+                          checked={selectedRows.has(m.id)}
+                          onChange={() => toggleRow(m.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+                        />
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-gray-900 truncate">{m.name}</td>
+                      <td className="px-4 py-3.5">
+                        <SiteStatusBadge status={m.status} />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Badge
+                          variant={m.memberType === "Primary" ? "primary" : "neutral"}
+                          bordered={m.memberType === "Primary"}
+                        >
+                          {m.memberType}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-600 truncate">{m.hospitalType}</td>
+                      <td className="px-4 py-3.5 text-gray-600">{m.city}</td>
+                      <td className="px-4 py-3.5 text-gray-600">{m.state}</td>
+                      <td className="px-4 py-3.5 pr-6 text-right">
+                        <RowActionMenu items={rowActions(m)} label={`Actions for ${m.name}`} />
+                      </td>
+                    </tr>
+                  )) : (
                     <tr>
-                      <td colSpan={8} className="py-16 text-center text-sm text-gray-400">
-                        {group.members.length === 0
-                          ? "No clinics in this group yet — click \"Add Clinic\" to get started."
-                          : "No clinics match your search."}
+                      <td colSpan={8} className="py-16 text-center">
+                        <Building2 size={32} className="mx-auto mb-3 text-gray-200" />
+                        <p className="text-sm text-gray-400">
+                          {group.members.length === 0
+                            ? "No clinics in this group yet."
+                            : "No clinics match your filters."}
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -410,17 +523,16 @@ export function GroupClinicPage() {
               </table>
             </div>
 
-            {/* Pagination — inside card border */}
+            {/* Pagination */}
             <div className="px-5 py-3 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
               <p className="text-xs text-gray-500">
-                Page <span className="font-semibold text-gray-700">{currentPage}</span> of{" "}
-                <span className="font-semibold text-gray-700">{totalPages}</span>
-                <span className="mx-2 text-gray-300">·</span>
-                {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} clinics
+                {filtered.length > 0
+                  ? <>{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} clinics</>
+                  : "No clinics"}
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-gray-500 mr-2">
-                  Rows per page:
+                  Rows:
                   <select
                     className="ml-1.5 text-xs font-medium text-gray-700 border border-gray-200 rounded-md px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                     value={itemsPerPage}
@@ -430,16 +542,16 @@ export function GroupClinicPage() {
                   </select>
                 </span>
                 {[
-                  { label: "«", action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
-                  { label: "‹", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "«", title: "First page",    action: () => setCurrentPage(1),                            disabled: currentPage === 1 },
+                  { label: "‹", title: "Previous page", action: () => setCurrentPage(Math.max(1, currentPage - 1)), disabled: currentPage === 1 },
+                ].map(({ label, title, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={title}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>
                 ))}
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setCurrentPage(p)}
+                  <button key={p} onClick={() => setCurrentPage(p)} aria-current={p === currentPage ? "page" : undefined}
                     className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition ${
                       p === currentPage ? "bg-teal-600 text-white border border-teal-600" : "border border-gray-200 text-gray-600 hover:bg-gray-50"
                     }`}>
@@ -447,10 +559,10 @@ export function GroupClinicPage() {
                   </button>
                 ))}
                 {[
-                  { label: "›", action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
-                  { label: "»", action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
-                ].map(({ label, action, disabled }) => (
-                  <button key={label} onClick={action} disabled={disabled}
+                  { label: "›", title: "Next page",  action: () => setCurrentPage(Math.min(totalPages, currentPage + 1)), disabled: currentPage === totalPages },
+                  { label: "»", title: "Last page",  action: () => setCurrentPage(totalPages),                            disabled: currentPage === totalPages },
+                ].map(({ label, title, action, disabled }) => (
+                  <button key={label} onClick={action} disabled={disabled} aria-label={title}
                     className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs">
                     {label}
                   </button>
@@ -460,6 +572,9 @@ export function GroupClinicPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog state={confirm} onClose={() => setConfirm(null)} />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

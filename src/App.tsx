@@ -15,7 +15,7 @@
  */
 
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useState }                      from "react";
+import { useState, useEffect }           from "react";
 import { AlertTriangle, CheckCircle2 }   from "lucide-react";
 
 import { ClinicProvider, useClinic }     from "./context/ClinicContext";
@@ -23,6 +23,7 @@ import { ApprovalProvider, useApproval } from "./context/ApprovalContext";
 import type { ClinicWebsite }            from "./types/clinic";
 
 import { TopBar }             from "./components/layout/TopBar";
+import { RoleGuard }          from "./components/layout/RoleGuard";
 import { LeftNavigation }     from "./components/LeftNavigation";
 import { WebsiteEditorSubNav } from "./components/WebsiteEditor/WebsiteEditorSubNav";
 import type { InternalMode }  from "./components/WebsiteEditor/WebsiteEditorSubNav";
@@ -43,6 +44,8 @@ import { ApprovalReviewPage }   from "./components/ApprovalFlow/ApprovalReviewPa
 import { MySubmissionsPage }    from "./components/ApprovalFlow/MySubmissionsPage";
 import { UserManagementPage }   from "./components/UserManagement/UserManagementPage";
 import { InviteUserPage }       from "./components/UserManagement/InviteUserPage";
+import { SettingsPage }         from "./components/Settings/SettingsPage";
+import { HelpPage }             from "./components/Help/HelpPage";
 
 // Site creation 3-step flow
 import { HospitalSetupPage }    from "./components/HospitalSetup/HospitalSetupPage";
@@ -51,10 +54,10 @@ import { DomainManagementPage } from "./components/WebsiteEditor/DomainManagemen
 
 import { findRouteByPath }      from "./config/routes.config";
 import { LayoutProvider }       from "./context/LayoutContext";
+import { type DemoRole, isPathBlockedForRole } from "./config/rolePermissions";
 
 /* ── Shared type ─────────────────────────────────────────────────────────── */
 
-type DemoRole = "admin" | "manager" | "custom";
 type SubmissionStatus = "idle" | "pending" | "rejected";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -83,6 +86,9 @@ function AppLayout({ activeRole, onRoleChange }: AppLayoutProps) {
       case "invite-user":
         navigate("/users/invite");
         break;
+      case "create-banner":
+        navigate("/banners", { state: { openCreate: true } });
+        break;
       default:
         console.info("CTA action:", action);
     }
@@ -91,7 +97,7 @@ function AppLayout({ activeRole, onRoleChange }: AppLayoutProps) {
   return (
     <LayoutProvider>
       <div className="h-screen flex flex-col overflow-hidden">
-        <TopBar onCTAClick={handleCTAAction} />
+        <TopBar onCTAClick={handleCTAAction} activeRole={activeRole} />
 
         <div className="flex-1 overflow-hidden flex">
           <LeftNavigation
@@ -125,13 +131,21 @@ function SiteCreation({ activeRole }: SiteCreationProps) {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { clinic, saveStatus, triggerSave, publish } = useClinic();
-  const { submitForApprovalWithDiff } = useApproval();
+  const { submitForApprovalWithDiff, getSubmissionStatus } = useApproval();
 
   const [internalMode,     setInternalMode]     = useState<InternalMode>("setup");
-  const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  // submissionStatus is derived from context so it persists across navigations
+  const [dismissedRejection, setDismissedRejection] = useState(false);
 
   const isCustom = activeRole === "custom";
+  const clinicId = clinic.general?.slug || "demo-clinic";
+
+  // Derive status from context — persists even if user navigates away and returns
+  const rawStatus = getSubmissionStatus(clinicId, "custom-user");
+  // Allow the user to dismiss a rejection banner (they've seen it, going back to edit)
+  const submissionStatus: SubmissionStatus =
+    rawStatus === "rejected" && dismissedRejection ? "idle" : rawStatus;
 
   // Figure out where the "← Back" button should go
   const fromPath: string  = (location.state as { from?: string })?.from ?? "/dashboard";
@@ -140,16 +154,15 @@ function SiteCreation({ activeRole }: SiteCreationProps) {
 
   /* Submit for review — custom role only */
   const handleSubmitForReview = () => {
-    const clinicId = clinic.general?.slug || "demo-clinic";
+    setDismissedRejection(false);
     // Cast to ClinicWebsite — draft is compatible enough for the diff engine
     submitForApprovalWithDiff(clinicId, clinic as unknown as ClinicWebsite, "custom-user");
-    setSubmissionStatus("pending");
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 4000);
   };
 
   /* Dismiss the rejection banner (user has seen it, going back to edit) */
-  const handleDismissRejection = () => setSubmissionStatus("idle");
+  const handleDismissRejection = () => setDismissedRejection(true);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
@@ -237,6 +250,15 @@ function SiteCreation({ activeRole }: SiteCreationProps) {
 
 function AppRouter() {
   const [activeRole, setActiveRole] = useState<DemoRole>("admin");
+  const navigate  = useNavigate();
+  const { pathname } = useLocation();
+
+  /* Redirect when role changes and the current page is now blocked */
+  useEffect(() => {
+    if (isPathBlockedForRole(pathname, activeRole)) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [activeRole, pathname, navigate]);
 
   return (
     <Routes>
@@ -249,9 +271,27 @@ function AppRouter() {
       {/* ── Normal layout ── */}
       <Route element={<AppLayout activeRole={activeRole} onRoleChange={setActiveRole} />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard"               element={<DashboardPage />} />
-        <Route path="/insights/ab-testing" element={<ABTestingPage userRole={activeRole} />} />
-        <Route path="/insights/funnels"    element={<ConversionFunnelsPage userRole={activeRole} />} />
+        <Route path="/dashboard"               element={<DashboardPage userRole={activeRole} />} />
+
+        {/* Admin + Manager only */}
+        <Route element={<RoleGuard activeRole={activeRole} allowed={["admin", "manager"]} />}>
+          <Route path="/insights/ab-testing" element={<ABTestingPage userRole={activeRole} />} />
+          <Route path="/insights/funnels"    element={<ConversionFunnelsPage userRole={activeRole} />} />
+          <Route path="/approvals"           element={<ApprovalFlowPage />} />
+          <Route path="/users"               element={<UserManagementPage />} />
+          <Route path="/users/invite"        element={<InviteUserPage />} />
+        </Route>
+
+        {/* Admin only */}
+        <Route element={<RoleGuard activeRole={activeRole} allowed={["admin"]} />}>
+          <Route path="/settings"            element={<SettingsPage />} />
+        </Route>
+
+        {/* Custom only */}
+        <Route element={<RoleGuard activeRole={activeRole} allowed={["custom"]} />}>
+          <Route path="/my-submissions"      element={<MySubmissionsPage />} />
+        </Route>
+
         <Route path="/sites"               element={<Navigate to="/sites/all" replace />} />
         <Route path="/sites/all"           element={<SiteListPage />} />
         <Route path="/sites/groups"        element={<GroupsPage />} />
@@ -259,10 +299,7 @@ function AppRouter() {
         <Route path="/data-collection"     element={<DataCollectionPage />} />
         <Route path="/media-library"       element={<MediaLibraryPage />} />
         <Route path="/banners"             element={<BannerManagementPage />} />
-        <Route path="/my-submissions"      element={<MySubmissionsPage />} />
-        <Route path="/approvals"           element={<ApprovalFlowPage />} />
-        <Route path="/users"               element={<UserManagementPage />} />
-        <Route path="/users/invite"        element={<InviteUserPage />} />
+        <Route path="/help"                element={<HelpPage />} />
         {/* Catch-all → dashboard */}
         <Route path="*"                    element={<Navigate to="/dashboard" replace />} />
       </Route>

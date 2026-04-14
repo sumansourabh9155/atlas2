@@ -113,6 +113,7 @@ interface ApprovalContextType {
   getFeedback: (versionId: string) => ApprovalFeedback[];
   resolveFeedback: (feedbackId: string) => void;
   getChangeStats: (versionId: string) => any;
+  getSubmissionStatus: (clinicId: string, userId: string) => "idle" | "pending" | "rejected";
 }
 
 const ApprovalContext = createContext<ApprovalContextType | undefined>(undefined);
@@ -498,6 +499,25 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
     [state.workflows]
   );
 
+  const getSubmissionStatus = useCallback(
+    (clinicId: string, userId: string): "idle" | "pending" | "rejected" => {
+      // Check pending approvals list (status === "pending_review")
+      const isPending = state.pendingApprovals.some(
+        (v) => v.clinicId === clinicId && v.createdBy === userId
+      );
+      if (isPending) return "pending";
+
+      // Check workflow history for the latest entry by this user
+      const workflow = state.workflows.get(clinicId);
+      const history = workflow?.approvalHistory ?? [];
+      const lastByUser = [...history].reverse().find((h) => h.createdBy === userId);
+      if (lastByUser?.status === "rejected") return "rejected";
+
+      return "idle";
+    },
+    [state.workflows, state.pendingApprovals]
+  );
+
   const value: ApprovalContextType = {
     workflows: state.workflows,
     currentClinicId: state.currentClinicId,
@@ -518,6 +538,7 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
     getFeedback,
     resolveFeedback,
     getChangeStats: getChangeStatsForVersion,
+    getSubmissionStatus,
   };
 
   return (

@@ -40,3 +40,5 @@ export {
   RoleBadge,
   UserStatusIndicator,
 } from "./StatusBadge";
+
+export { FieldReviewHint } from "./FieldReviewHint";

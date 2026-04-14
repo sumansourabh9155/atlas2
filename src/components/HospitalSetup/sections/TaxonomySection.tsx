@@ -2,7 +2,8 @@ import { Tags } from "lucide-react";
 import { FormField } from "../ui/FormField";
 import { PetTypeBadgeSelector } from "../ui/PetTypeBadgeSelector";
 import type { PetType } from "../../../types/clinic";
-
+import { useReviewMode } from "../../../context/ReviewModeContext";
+import { FieldReviewHint } from "../../ui/FieldReviewHint";
 import { surface } from "../../../lib/styles/tokens";
 
 const CARD = surface.section;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function TaxonomySection({ data, onChange }: Props) {
+  const reviewMode = useReviewMode();
   return (
     <div className={CARD}>
       <div className="flex items-start gap-3 pb-4 border-b border-gray-100">
@@ -39,11 +41,14 @@ export function TaxonomySection({ data, onChange }: Props) {
         hint="Click to select. You can choose multiple."
         required
       >
-        <PetTypeBadgeSelector
-          name="petTypes"
-          value={data.petTypes}
-          onChange={(petTypes) => onChange({ petTypes })}
-        />
+        <div className={reviewMode.getFieldHighlightClass("taxonomy.petTypes")}>
+          <PetTypeBadgeSelector
+            name="petTypes"
+            value={data.petTypes}
+            onChange={(petTypes) => onChange({ petTypes })}
+          />
+        </div>
+        <FieldReviewHint path="taxonomy.petTypes" />
       </FormField>
 
       {/* Informational callout */}

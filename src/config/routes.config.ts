@@ -10,6 +10,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
+import type { DemoRole } from "./rolePermissions";
 import {
   LayoutDashboard, Building2, Database, Image,
   Megaphone, CheckCircle, Users, Settings, HelpCircle,
@@ -23,6 +24,8 @@ export interface CtaConfig {
   label: string;
   action: string;
   icon: LucideIcon;
+  /** When set, CTA is hidden for roles not in this list */
+  allowedRoles?: DemoRole[];
 }
 
 export interface RouteConfig {
@@ -160,7 +163,7 @@ export const ROUTES: RouteConfig[] = [
     label: "User Management",
     navSection: "management",
     icon: Users,
-    cta: { label: "Invite User", action: "invite-user", icon: UserPlus },
+    cta: { label: "Invite User", action: "invite-user", icon: UserPlus, allowedRoles: ["admin", "manager"] },
   },
 
   // ─── SUPPORT — Settings + Help, below Management in the sidebar ──────────
