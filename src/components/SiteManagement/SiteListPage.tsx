@@ -296,10 +296,10 @@ export function SiteListPage() {
     <div className="flex-1 bg-white flex flex-col overflow-hidden">
 
       {/* ── Fixed header ── */}
-      <div className="px-8 pt-8 pb-4 flex-shrink-0 space-y-5">
+      <div className="px-10 pt-10 pb-6 flex-shrink-0 space-y-5">
 
         {/* KPI cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-6">
           {STATS.map((s) => (
             <KpiCard key={s.label} label={s.label} value={s.value} icon={s.icon} color={s.color} tinted />
           ))}

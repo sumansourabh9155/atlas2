@@ -137,10 +137,10 @@ export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
 
   return (
     <div className={surface.page}>
-      <div className="p-6 space-y-4">
+      <div className="p-8 space-y-6">
 
         {/* ═══ ROW 1 — KPI Stat Cards ═══ */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-6">
           <KpiCard label="Total Sites"       value={145} icon={Building2}    color="blue"    delta="+12 this month" deltaUp onClick={() => navigate("/sites/all")} />
           <KpiCard label="Published"         value={98}  icon={CheckCircle2} color="emerald" delta="+8 this week"   deltaUp onClick={() => navigate("/sites/all")} />
           <KpiCard label="Pending Approvals" value={pendingCount || 7} icon={Clock} color="amber" delta={pendingCount > 0 ? `${Math.min(pendingCount, 3)} urgent today` : "All clear"} deltaUp={false} onClick={() => navigate(isCustom ? "/my-submissions" : "/approvals")} />
@@ -148,7 +148,7 @@ export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
         </div>
 
         {/* ═══ ROW 2 — Needs Attention | Recent Activity ═══ */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-6">
 
           {/* Needs Attention */}
           <Card variant="flush">
@@ -166,7 +166,7 @@ export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
               {visibleAttentionItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.id} className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                  <div key={item.id} className="px-6 py-5 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start gap-3">
                       <div className={`${item.bg} rounded-lg p-1.5 flex-shrink-0 mt-0.5`}>
                         <Icon size={13} className={item.iconColor} aria-hidden="true" />
@@ -219,7 +219,7 @@ export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
                 <div className="py-10 text-center text-sm text-gray-400">No activity for this filter</div>
               ) : (
                 filteredActivity.map((item) => (
-                  <div key={item.id} className="px-6 py-3.5 hover:bg-gray-50 transition-colors">
+                  <div key={item.id} className="px-6 py-5 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <Avatar initials={item.initials} gradient={item.gradient} size="sm" />
                       <div className="flex-1 min-w-0">
@@ -258,7 +258,7 @@ export function DashboardPage({ userRole = "admin" }: DashboardPageProps) {
               </button>
             }
           />
-          <div className="px-6 py-5">
+          <div className="px-8 py-6">
             {/* Segmented bar — each segment is clickable */}
             <div className="flex rounded-full overflow-hidden h-3 bg-gray-100 gap-px">
               {PIPELINE_STAGES.map((stage) => (

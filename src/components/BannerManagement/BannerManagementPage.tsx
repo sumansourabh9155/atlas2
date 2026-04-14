@@ -285,7 +285,7 @@ export function BannerManagementPage() {
     <div className={`${surface.page} relative`}>
 
       {/* ── Page body ── */}
-      <div className="p-6 space-y-5 h-full overflow-y-auto">
+      <div className="p-8 space-y-6 h-full overflow-y-auto">
 
         {/* ── Toolbar: search + filters + count ── */}
         <div className="flex items-center gap-3 flex-wrap">
@@ -332,7 +332,7 @@ export function BannerManagementPage() {
                 }`}
               >
                 {/* Card body */}
-                <div className="p-5">
+                <div className="p-6">
                   <div className="flex items-start justify-between gap-4">
 
                     {/* Left: icon + info */}
@@ -366,7 +366,7 @@ export function BannerManagementPage() {
                   </div>
 
                   {/* Meta strip */}
-                  <div className="mt-4 grid grid-cols-4 gap-3 px-3 py-2.5 bg-gray-50 rounded-lg">
+                  <div className="mt-4 grid grid-cols-4 gap-3 px-4 py-3 bg-gray-50 rounded-lg">
                     {[
                       { label: "Location",  value: getLocationLabel(banner.location)                                          },
                       { label: "Placement", value: getPlacementLabel(banner.placement)                                        },
@@ -401,10 +401,10 @@ export function BannerManagementPage() {
             role="dialog"
             aria-modal="true"
             aria-label={editingId ? "Edit Banner" : "Create Banner"}
-            className="fixed right-0 top-14 bottom-0 w-[480px] bg-white border-l border-gray-200 z-50 flex flex-col shadow-2xl"
+            className="fixed right-0 top-16 bottom-0 w-[480px] bg-white border-l border-gray-200 z-50 flex flex-col shadow-2xl"
           >
             {/* Drawer header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center">
                   <ImagePlus size={14} className="text-teal-600" aria-hidden="true" />
@@ -424,7 +424,7 @@ export function BannerManagementPage() {
             </div>
 
             {/* Drawer body (scrollable) */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
 
               {/* Name */}
               <div>
@@ -617,7 +617,7 @@ export function BannerManagementPage() {
             </div>
 
             {/* Drawer footer */}
-            <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-white">
+            <div className="flex-shrink-0 border-t border-gray-200 px-8 py-5 flex items-center justify-between bg-white">
               <button
                 type="button"
                 onClick={attemptClose}

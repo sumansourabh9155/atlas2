@@ -28,16 +28,16 @@ export function EmptyState({
   className = "",
 }: EmptyStateProps) {
   return (
-    <div className={`py-16 flex flex-col items-center justify-center text-center ${className}`}>
+    <div className={`py-24 flex flex-col items-center justify-center text-center ${className}`}>
       {Icon && (
-        <Icon size={40} className="text-gray-200 mb-4" aria-hidden="true" />
+        <Icon size={40} className="text-gray-200 mb-5" aria-hidden="true" />
       )}
       <p className="text-sm font-medium text-gray-500">{title}</p>
       {subtitle && (
         <p className="text-xs text-gray-400 mt-1 max-w-xs">{subtitle}</p>
       )}
       {action && (
-        <div className="mt-4">
+        <div className="mt-6">
           <Button size="sm" {...action}>
             {action.label}
           </Button>

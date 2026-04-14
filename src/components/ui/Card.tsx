@@ -13,9 +13,9 @@ import React from "react";
 /* ── Variant class maps ─────────────────────────────────────────── */
 
 const VARIANT = {
-  default: "bg-white border border-gray-200 rounded-xl p-5",
-  hover:   "bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 hover:shadow-sm transition-all",
-  section: "bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5",
+  default: "bg-white border border-gray-200 rounded-xl p-6",
+  hover:   "bg-white border border-gray-200 rounded-xl p-6 hover:border-gray-300 hover:shadow-sm transition-all",
+  section: "bg-white border border-gray-200 rounded-xl p-8 flex flex-col gap-6",
   flush:   "bg-white border border-gray-200 rounded-xl overflow-hidden",
 } as const;
 
@@ -61,7 +61,7 @@ export function CardHeader({
   className = "",
 }: CardHeaderProps) {
   return (
-    <div className={`px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 ${className}`}>
+    <div className={`px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-3 ${className}`}>
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-gray-900 truncate">{title}</h2>
         {subtitle && (

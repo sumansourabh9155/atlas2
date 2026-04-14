@@ -357,7 +357,7 @@ export function ApprovalFlowPage() {
 
   return (
     <div className="flex-1 overflow-hidden bg-white flex flex-col">
-      <div className="p-10 overflow-y-auto flex-1">
+      <div className="p-12 overflow-y-auto flex-1">
         {/* Tabs */}
         <div role="tablist" aria-label="Approval sections" className="flex gap-4 border-b border-gray-200 mb-8">
           {[
@@ -502,7 +502,7 @@ export function ApprovalFlowPage() {
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="px-8 py-5 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
                   Review Changes: {selectedPendingV2.clinicId}
@@ -538,7 +538,7 @@ export function ApprovalFlowPage() {
             <div className="flex-1 overflow-hidden flex">
               {/* Left: Change groups */}
               <div className="w-48 border-r border-gray-200 overflow-y-auto bg-gray-50">
-                <div className="p-3 space-y-2">
+                <div className="p-4 space-y-2">
                   <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide px-2">
                     Changes by Section
                   </h3>
@@ -583,7 +583,7 @@ export function ApprovalFlowPage() {
 
               {/* Right: Feedback Thread */}
               <div className="w-64 border-l border-gray-200 overflow-y-auto bg-gray-50">
-                <div className="p-3">
+                <div className="p-4">
                   <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
                     Feedback
                   </h3>
@@ -596,7 +596,7 @@ export function ApprovalFlowPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+            <div className="px-8 py-5 border-t border-gray-200 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowDetailModal(false)}
                 className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50 transition"

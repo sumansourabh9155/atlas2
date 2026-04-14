@@ -60,7 +60,7 @@ export function KpiCard({
     <Tag
       onClick={onClick}
       className={[
-        "border border-gray-200 rounded-xl p-5 text-left",
+        "border border-gray-200 rounded-xl p-6 text-left",
         "hover:border-gray-300 hover:shadow-sm transition-all group",
         tinted ? c.bg : "bg-white",
         onClick ? "cursor-pointer" : "",
@@ -87,7 +87,7 @@ export function KpiCard({
           )}
         </div>
         <div
-          className={`${c.badge} rounded-lg p-2.5 flex-shrink-0 group-hover:scale-105 transition-transform`}
+          className={`${c.badge} rounded-lg p-3 flex-shrink-0 group-hover:scale-105 transition-transform`}
         >
           <Icon size={18} className={c.icon} aria-hidden="true" />
         </div>

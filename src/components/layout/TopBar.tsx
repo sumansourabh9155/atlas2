@@ -35,7 +35,7 @@ export function TopBar({ onCTAClick, activeRole }: TopBarProps) {
   const RouteIcon = route?.icon;
 
   return (
-    <div className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center z-50 overflow-hidden">
+    <div className="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center z-50 overflow-hidden">
 
       {/* ── Brand section — mirrors nav width with smooth transition ── */}
       <div
@@ -71,7 +71,7 @@ export function TopBar({ onCTAClick, activeRole }: TopBarProps) {
       </div>
 
       {/* ── Page label + CTA ── */}
-      <div className="flex flex-1 items-center justify-between px-6 gap-4 min-w-0">
+      <div className="flex flex-1 items-center justify-between px-8 gap-4 min-w-0">
 
         {/* Left: breadcrumb (sub-page) OR icon+title (top-level) */}
         {backTo ? (

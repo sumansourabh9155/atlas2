@@ -115,17 +115,17 @@ export const text = {
 
 export const spacing = {
   /** Standard page padding */
-  page:    "p-6",
+  page:    "p-8",
   /** Standard page vertical stack */
-  pageGap: "space-y-4",
+  pageGap: "space-y-6",
   /** Card inner padding */
-  card:    "p-5",
-  cardLg:  "p-6",
+  card:    "p-6",
+  cardLg:  "p-8",
   /** Section gaps */
-  sectionGap: "gap-4",
+  sectionGap: "gap-6",
   /** Row gaps inside tables */
-  cellPx:  "px-5",
-  cellPy:  "py-3.5",
+  cellPx:  "px-6",
+  cellPy:  "py-5",
 } as const;
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -186,13 +186,13 @@ export const surface = {
   cardHover:   "bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all",
   panel:       "bg-white border border-gray-200 rounded-xl overflow-hidden",
   page:        "flex-1 overflow-y-auto bg-gray-50",
-  section:     "bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-5",
+  section:     "bg-white border border-gray-200 rounded-xl p-8 flex flex-col gap-6",
 } as const;
 
 /** Standard form input */
 export const input = {
   base: [
-    "w-full h-9 px-3 text-sm text-gray-900 bg-white",
+    "w-full h-10 px-3.5 text-sm text-gray-900 bg-white",
     "border border-gray-300 rounded-lg",
     "placeholder:text-gray-400",
     "focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500",
@@ -209,7 +209,7 @@ export const input = {
   ].join(" "),
   /** Textarea variant */
   textarea: [
-    "w-full px-3 py-2.5 text-sm text-gray-900 bg-white",
+    "w-full px-3.5 py-3 text-sm text-gray-900 bg-white",
     "border border-gray-300 rounded-lg",
     "placeholder:text-gray-400",
     "focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500",
@@ -218,7 +218,7 @@ export const input = {
   ].join(" "),
   /** Select / dropdown */
   select: [
-    "appearance-none w-full h-9 pl-3 pr-8 text-sm text-gray-900 bg-white",
+    "appearance-none w-full h-10 pl-3.5 pr-9 text-sm text-gray-900 bg-white",
     "border border-gray-300 rounded-lg cursor-pointer",
     "focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500",
     "transition-colors",
@@ -226,7 +226,7 @@ export const input = {
   ].join(" "),
   /** Search input with left icon space */
   search: [
-    "w-full pl-9 pr-4 h-9 text-sm bg-white",
+    "w-full pl-10 pr-4 h-10 text-sm bg-white",
     "border border-gray-200 rounded-lg",
     "placeholder:text-gray-400",
     "focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500",
@@ -241,11 +241,11 @@ export const table = {
   wrapper:   "border border-gray-200 rounded-xl overflow-hidden",
   root:      "w-full text-sm border-collapse",
   thead:     "bg-gray-50 border-b border-gray-200",
-  th:        "px-5 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap",
+  th:        "px-6 py-4 text-left text-xs font-semibold text-gray-600 whitespace-nowrap",
   /** Alternating row: idx % 2 === 0 ? row : rowAlt */
   row:       "border-b border-gray-100 bg-white hover:bg-gray-50/70 transition-colors",
   rowAlt:    "border-b border-gray-100 bg-gray-50/30 hover:bg-gray-50/70 transition-colors",
-  td:        "px-5 py-3.5",
+  td:        "px-6 py-5",
   /** Default empty-state row */
   empty:     "py-16 text-center text-sm text-gray-400",
 } as const;

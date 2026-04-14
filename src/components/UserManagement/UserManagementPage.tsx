@@ -123,7 +123,7 @@ export function UserManagementPage() {
         </div>
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-8 space-y-6">
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
