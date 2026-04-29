@@ -15,7 +15,7 @@ import {
   LayoutDashboard, Building2, Database, Image,
   Megaphone, CheckCircle, Users, Settings, HelpCircle,
   Plus, FolderPlus, MapPin, Upload, ImagePlus, UserPlus, ClipboardList,
-  GitBranch, TrendingDown,
+  GitBranch, TrendingDown, Star, RefreshCw,
 } from "lucide-react";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -52,6 +52,17 @@ export interface RouteConfig {
    * e.g. { label: "Users", path: "/users" } → "← Users  /  Invite User"
    */
   backTo?: { label: string; path: string };
+  /**
+   * Optional subtitle shown below the page title in the TopBar.
+   * Use for pages that benefit from a brief context line.
+   */
+  subtitle?: string;
+  /**
+   * When set, findRouteByPath matches any pathname that starts with this prefix.
+   * Used for parameterised sub-pages (e.g. /reviews/:locationId) so the TopBar
+   * can show the correct label + backTo without needing a static path per param.
+   */
+  matchPrefix?: string;
 }
 
 /* ── Route Definitions ──────────────────────────────────────────────────── */
@@ -133,6 +144,26 @@ export const ROUTES: RouteConfig[] = [
     navSection: "analytics",
     icon: TrendingDown,
   },
+  // ─── REVIEWS ─────────────────────────────────────────────────────────────
+  {
+    path: "/reviews",
+    id: "reviews",
+    label: "Google Reviews",
+    navSection: "management",
+    icon: Star,
+    subtitle: "Curate and feature the best reviews for each location's website.",
+    cta: { label: "Sync All", action: "sync-all-reviews", icon: RefreshCw },
+  },
+  // Location-level detail — matches /reviews/:locationId via matchPrefix
+  {
+    path: "/reviews/detail",
+    id: "reviews-detail",
+    label: "Location Reviews",
+    hideFromNav: true,
+    matchPrefix: "/reviews/",
+    backTo: { label: "Google Reviews", path: "/reviews" },
+  },
+
   // ─── MANAGEMENT ──────────────────────────────────────────────────────────
   {
     path: "/banners",
@@ -217,10 +248,16 @@ export const ROUTES: RouteConfig[] = [
 
 /** Return the best-matching route for a given pathname */
 export function findRouteByPath(pathname: string): RouteConfig | undefined {
-  // Exact match first
+  // 1. Exact match
   const exact = ROUTES.find((r) => r.path === pathname);
   if (exact) return exact;
-  // Then prefix match (longest wins)
+
+  // 2. matchPrefix — for parameterised sub-pages (e.g. /reviews/:locationId)
+  //    Hidden routes that declare matchPrefix take priority over generic prefix match.
+  const prefixed = ROUTES.find((r) => !!r.matchPrefix && pathname.startsWith(r.matchPrefix));
+  if (prefixed) return prefixed;
+
+  // 3. Prefix match (longest wins, non-hidden nav routes only)
   return ROUTES.filter(
     (r) => !r.hideFromNav && r.path !== "/" && pathname.startsWith(r.path + "/"),
   ).sort((a, b) => b.path.length - a.path.length)[0];

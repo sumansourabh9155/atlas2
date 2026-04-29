@@ -89,12 +89,17 @@ export function TopBar({ onCTAClick, activeRole }: TopBarProps) {
             <span className="text-sm font-semibold text-gray-900 truncate">{pageLabel}</span>
           </div>
         ) : (
-          /* Top-level: optional icon + page title */
+          /* Top-level: optional icon + page title (+ optional subtitle) */
           <div className="flex items-center gap-2 min-w-0">
             {RouteIcon && (
               <RouteIcon size={15} className="text-gray-400 flex-shrink-0" aria-hidden="true" />
             )}
-            <h1 className="text-sm font-semibold text-gray-900 truncate">{pageLabel}</h1>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-gray-900 truncate leading-tight">{pageLabel}</h1>
+              {route?.subtitle && (
+                <p className="text-xs text-gray-400 truncate leading-tight mt-px">{route.subtitle}</p>
+              )}
+            </div>
           </div>
         )}
 

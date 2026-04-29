@@ -39,6 +39,7 @@ import { MultiLocationPage }    from "./components/SiteManagement/MultiLocationP
 import { DataCollectionPage }   from "./components/DataCollection/DataCollectionPage";
 import { MediaLibraryPage }     from "./components/MediaLibrary/MediaLibraryPage";
 import { BannerManagementPage } from "./components/BannerManagement/BannerManagementPage";
+import { ReviewsPage }          from "./components/Reviews/ReviewsPage";
 import { ApprovalFlowPage }     from "./components/ApprovalFlow/ApprovalFlowPage";
 import { ApprovalReviewPage }   from "./components/ApprovalFlow/ApprovalReviewPage";
 import { MySubmissionsPage }    from "./components/ApprovalFlow/MySubmissionsPage";
@@ -88,6 +89,9 @@ function AppLayout({ activeRole, onRoleChange }: AppLayoutProps) {
         break;
       case "create-banner":
         navigate("/banners", { state: { openCreate: true } });
+        break;
+      case "sync-all-reviews":
+        window.dispatchEvent(new CustomEvent("atlas:sync-reviews"));
         break;
       default:
         console.info("CTA action:", action);
@@ -299,6 +303,8 @@ function AppRouter() {
         <Route path="/data-collection"     element={<DataCollectionPage />} />
         <Route path="/media-library"       element={<MediaLibraryPage />} />
         <Route path="/banners"             element={<BannerManagementPage />} />
+        <Route path="/reviews"             element={<ReviewsPage />} />
+        <Route path="/reviews/:locationId" element={<ReviewsPage />} />
         <Route path="/help"                element={<HelpPage />} />
         {/* Catch-all → dashboard */}
         <Route path="*"                    element={<Navigate to="/dashboard" replace />} />
