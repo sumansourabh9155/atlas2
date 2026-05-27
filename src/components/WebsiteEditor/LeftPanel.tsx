@@ -517,6 +517,8 @@ interface LeftPanelProps {
   onTemplateDragStart?: (type: AddableSectionType) => void;
   onTemplateDragEnd?:   () => void;
   onAddSection?:        (type: AddableSectionType) => void;
+  /** When true the Components/Templates tab is hidden (used in review mode). */
+  hideTemplatesTab?:    boolean;
 }
 
 export function LeftPanel({
@@ -524,8 +526,12 @@ export function LeftPanel({
   isCollapsed: isCollapsedProp,
   onCollapsedChange,
   onTemplateDragStart, onTemplateDragEnd, onAddSection,
+  hideTemplatesTab = false,
 }: LeftPanelProps) {
   const [tab, setTab] = useState<"pages" | "templates">("pages");
+
+  // Force back to pages tab if templates tab is hidden (e.g. in review mode)
+  const effectiveTab = hideTemplatesTab ? "pages" : tab;
   const [isCollapsedInternal, setIsCollapsedInternal] = useState(false);
 
   // Save-status indicator — mirrors the pattern used in HospitalSetupPage
@@ -563,7 +569,9 @@ export function LeftPanel({
     >
       {/* Tab bar */}
       <div className="flex items-stretch border-b border-gray-200 h-11 shrink-0">
-        {(["pages", "templates"] as const).map(t => (
+        {(["pages", "templates"] as const)
+          .filter(t => !(t === "templates" && hideTemplatesTab))
+          .map(t => (
           <button
             key={t}
             type="button"
@@ -571,7 +579,7 @@ export function LeftPanel({
             className={[
               "flex-1 flex items-center justify-center text-xs font-medium border-b-2 transition-colors",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600",
-              tab === t
+              effectiveTab === t
                 ? "border-teal-600 text-teal-600"
                 : "border-transparent text-gray-500 hover:text-gray-700",
             ].join(" ")}
@@ -591,7 +599,7 @@ export function LeftPanel({
       </div>
 
       {/* Content */}
-      {tab === "pages"
+      {effectiveTab === "pages"
         ? <PagesTab selectedPage={selectedPage} onPageSelect={onPageSelect} />
         : (
           <SectionTemplatesTab

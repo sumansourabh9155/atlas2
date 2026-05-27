@@ -32,6 +32,11 @@ interface WebsiteEditorSubNavProps {
   submissionStatus?: "idle" | "pending" | "rejected";
   /** Called instead of onPublish when approvalMode=true and status is idle/rejected */
   onSubmitForReview?: () => void;
+  /**
+   * When provided, completely replaces the right-zone Save/Publish buttons.
+   * Used by ApprovalReviewPage to inject Approve All / Request Changes CTAs.
+   */
+  rightActions?: React.ReactNode;
 }
 
 const STEPS: { id: InternalMode; label: string }[] = [
@@ -52,6 +57,7 @@ export function WebsiteEditorSubNav({
   approvalMode = false,
   submissionStatus = "idle",
   onSubmitForReview,
+  rightActions,
 }: WebsiteEditorSubNavProps) {
 
   const NEXT_STEP: Partial<Record<InternalMode, InternalMode>> = {
@@ -149,6 +155,8 @@ export function WebsiteEditorSubNav({
 
       {/* ── Right: Action Buttons ── */}
       <div className="flex-1 flex items-center justify-end gap-2">
+        {/* Caller-supplied override — used by ApprovalReviewPage */}
+        {rightActions !== undefined ? rightActions : (<>
 
         {/* Save (always visible) */}
         <button
@@ -252,6 +260,7 @@ export function WebsiteEditorSubNav({
             </button>
           )
         )}
+        </>)}
       </div>
     </div>
   );

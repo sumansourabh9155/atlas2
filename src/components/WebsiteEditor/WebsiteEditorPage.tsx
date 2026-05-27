@@ -6,6 +6,7 @@ import { mockClinicData } from "../../data/mockClinic";
 import { VET_CATALOGUE, SERVICE_CATALOGUE } from "../../data/catalogue";
 import type { PreviewTheme } from "./LivePreviewPane";
 import { useClinic } from "../../context/ClinicContext";
+import { useReviewMode } from "../../context/ReviewModeContext";
 import { AIEditorContext, SECTION_LABELS } from "./ai/AIEditorContext";
 import { runToneRewrite, type TonePreset, type AllSectionContent } from "./ai/mockAI";
 import { FillFromScratchWizard } from "./ai/FillFromScratchWizard";
@@ -204,6 +205,9 @@ interface WebsiteEditorPageProps {
 export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps) {
   // Pull shared clinic identity from context
   const { clinic: clinicCtx, updateGeneral, updateSEO } = useClinic();
+
+  // Review mode — suppresses all creation/AI features
+  const { mode: reviewMode } = useReviewMode();
 
   // Layout state
   const [selectedPage, setSelectedPage] = useState("home");
@@ -717,16 +721,16 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
         sectionOrder={sectionOrder}
         sectionVisibility={sectionVisibility}
         onFieldClick={handlePreviewFieldClick}
-        onOpenWizard={() => setWizardOpen(true)}
-        onCheckConsistency={() => setConsistencyOpen(true)}
-        onTonePreset={handleTonePreset}
-        isToneLoading={isToneLoading}
-        activeTone={activeTone}
+        onOpenWizard={reviewMode ? undefined : () => setWizardOpen(true)}
+        onCheckConsistency={reviewMode ? undefined : () => setConsistencyOpen(true)}
+        onTonePreset={reviewMode ? undefined : handleTonePreset}
+        isToneLoading={reviewMode ? false : isToneLoading}
+        activeTone={reviewMode ? null : activeTone}
         dynamicSections={dynamicSections}
-        draggingTemplateType={draggingTemplateType}
-        onTemplateDrop={handleTemplateDrop}
-        onApplyCampaign={handleApplyCampaign}
-        activeMode={activeMode}
+        draggingTemplateType={reviewMode ? null : draggingTemplateType}
+        onTemplateDrop={reviewMode ? undefined : handleTemplateDrop}
+        onApplyCampaign={reviewMode ? undefined : handleApplyCampaign}
+        activeMode={reviewMode ? null : activeMode}
       />
 
       {/* ── Right spacer: matches the floating right panel's footprint (margin 12px + 300px panel) ── */}
@@ -745,9 +749,10 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
           onPageSelect={setSelectedPage}
           isCollapsed={leftCollapsed}
           onCollapsedChange={setLeftCollapsed}
-          onTemplateDragStart={setDraggingTemplateType}
-          onTemplateDragEnd={() => setDraggingTemplateType(null)}
-          onAddSection={(type) => handleTemplateDrop(type, sectionOrder.length - 1)}
+          onTemplateDragStart={reviewMode ? undefined : setDraggingTemplateType}
+          onTemplateDragEnd={reviewMode ? undefined : () => setDraggingTemplateType(null)}
+          onAddSection={reviewMode ? undefined : (type) => handleTemplateDrop(type, sectionOrder.length - 1)}
+          hideTemplatesTab={!!reviewMode}
         />
       </div>
 
@@ -781,28 +786,26 @@ export function WebsiteEditorPage({ onNavigateToSetup }: WebsiteEditorPageProps)
           dynamicSections={dynamicSections}
           onUpdateDynamic={updateDynamicSection}
           onRemoveDynamic={handleRemoveDynamicSection}
-          onOpenSmartModes={() => setSmartModesOpen(true)}
+          onOpenSmartModes={reviewMode ? undefined : () => setSmartModesOpen(true)}
         />
       </div>
 
     </div>
 
-    {/* ── Phase 3 overlays ── */}
-    {wizardOpen && (
+    {/* ── Phase 3 overlays — suppressed in review mode ── */}
+    {!reviewMode && wizardOpen && (
       <FillFromScratchWizard
         onComplete={handleFillAll}
         onClose={() => setWizardOpen(false)}
       />
     )}
-    {consistencyOpen && (
+    {!reviewMode && consistencyOpen && (
       <ConsistencyPanel
         onApplyFix={handleApplyFix}
         onClose={() => setConsistencyOpen(false)}
       />
     )}
-
-    {/* ── Generative Site Builder overlays ── */}
-    {smartModesOpen && (
+    {!reviewMode && smartModesOpen && (
       <SmartModesPanel
         smartModesState={smartModesState}
         onUpdate={(patch) => setSmartModesState(s => ({ ...s, ...patch }))}

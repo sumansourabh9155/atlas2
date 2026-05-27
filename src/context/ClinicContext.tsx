@@ -122,7 +122,7 @@ export interface ClinicVetsConfig {
 
 // ─── Internal state shape ──────────────────────────────────────────────────────
 
-interface ClinicState {
+export interface ClinicState {
   general: ClinicGeneral;
   taxonomy: ClinicTaxonomyCtx;
   contact: ClinicContactCtx;

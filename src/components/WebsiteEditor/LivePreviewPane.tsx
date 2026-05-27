@@ -492,22 +492,24 @@ export function LivePreviewPane({
           )}
         </div>
 
-        {/* ── Floating AI Copilot ── */}
-        <div className="absolute bottom-2 left-32 right-32 z-20">
-          <AICopilotBar
-            isGenerating={isGenerating}
-            onGenerate={onGenerate}
-            onExpandChange={setAiExpanded}
-            onOpenWizard={onOpenWizard}
-            onCheckConsistency={onCheckConsistency}
-            onTonePreset={onTonePreset}
-            isToneLoading={isToneLoading}
-            activeTone={activeTone}
-            clinic={clinic}
-            currentSectionOrder={sectionOrder}
-            onApplyCampaign={onApplyCampaign}
-          />
-        </div>
+        {/* ── Floating AI Copilot — hidden in review mode (no AI callbacks provided) ── */}
+        {(onOpenWizard || onCheckConsistency || onTonePreset || onApplyCampaign) && (
+          <div className="absolute bottom-2 left-32 right-32 z-20">
+            <AICopilotBar
+              isGenerating={isGenerating}
+              onGenerate={onGenerate}
+              onExpandChange={setAiExpanded}
+              onOpenWizard={onOpenWizard}
+              onCheckConsistency={onCheckConsistency}
+              onTonePreset={onTonePreset}
+              isToneLoading={isToneLoading}
+              activeTone={activeTone}
+              clinic={clinic}
+              currentSectionOrder={sectionOrder}
+              onApplyCampaign={onApplyCampaign}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Bottom status bar ── */}

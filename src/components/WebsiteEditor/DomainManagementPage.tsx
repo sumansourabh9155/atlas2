@@ -1,7 +1,9 @@
 // ─── DomainManagementPage ─────────────────────────────────────────────────────
 // Full domain publishing workflow: custom domains, SSL, DNS, publish status.
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useClinic } from "../../context/ClinicContext";
+import { useReviewMode } from "../../context/ReviewModeContext";
 import {
   Globe, Shield, CheckCircle2, XCircle, Clock, AlertTriangle,
   Copy, ExternalLink, Plus, Trash2, Star, StarOff,
@@ -494,6 +496,10 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // In review mode domain rows are read-only — no add/delete/primary changes
+  const { mode: reviewMode } = useReviewMode();
+  const isReadOnly = !!reviewMode;
+
   return (
     <div className={`border rounded-xl overflow-hidden transition-all ${domain.isPrimary ? "border-teal-600/25 bg-teal-600/2" : "border-slate-200 bg-white"}`}>
       {/* Main row */}
@@ -541,7 +547,7 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          {!domain.isPrimary && (
+          {!isReadOnly && !domain.isPrimary && (
             <button
               type="button"
               onClick={onSetPrimary}
@@ -551,7 +557,7 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
               <Star className="w-3.5 h-3.5" />
             </button>
           )}
-          {!domain.hostname.endsWith(".vetcms.io") && (
+          {!isReadOnly && !domain.hostname.endsWith(".vetcms.io") && (
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
@@ -572,8 +578,8 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
         </div>
       </div>
 
-      {/* Delete confirm */}
-      {confirmDelete && (
+      {/* Delete confirm — never shown in review mode */}
+      {!isReadOnly && confirmDelete && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-red-50 border-t border-red-100">
           <span className="text-xs text-red-700 font-medium">Remove <strong>{domain.hostname}</strong>?</span>
           <div className="flex items-center gap-1.5">
@@ -628,6 +634,89 @@ function DomainRow({ domain, onSetPrimary, onDelete, onRefresh }: DomainRowProps
   );
 }
 
+// ─── Domain Review Banner ────────────────────────────────────────────────────
+
+import type { FieldChange } from "../../lib/approval/diffGenerator";
+
+// Map field paths → human-readable section labels for the domain page
+function domainSectionLabel(path: string): string {
+  if (path.startsWith("general.slug"))    return "Site URL / Slug";
+  if (path.startsWith("contact.website")) return "Custom Domain";
+  if (path.startsWith("integrations"))    return "Integrations";
+  if (path.startsWith("seo"))             return "SEO";
+  return "Other";
+}
+
+function DomainReviewBanner({
+  changes,
+  mode,
+}: {
+  changes: FieldChange[];
+  mode: "admin-review" | "custom-revise";
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const rejected = changes.filter(c => c.status === "rejected").length;
+  const isRed    = rejected > 0 || mode === "custom-revise";
+
+  // Group by section label
+  const groups = changes.reduce<Record<string, FieldChange[]>>((acc, fc) => {
+    const lbl = domainSectionLabel(fc.path);
+    (acc[lbl] ??= []).push(fc);
+    return acc;
+  }, {});
+
+  return (
+    <div className={`rounded-xl border p-4 ${isRed ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
+      <div
+        className="flex items-start justify-between gap-3 cursor-pointer"
+        onClick={() => setCollapsed(v => !v)}
+      >
+        <div className="flex items-start gap-2.5">
+          <Info className={`w-4 h-4 shrink-0 mt-0.5 ${isRed ? "text-red-500" : "text-amber-500"}`} />
+          <div>
+            <p className={`text-sm font-semibold ${isRed ? "text-red-800" : "text-amber-800"}`}>
+              {changes.length} change{changes.length !== 1 ? "s" : ""} affect this step
+              {rejected > 0 && <span className="ml-1.5 text-red-600 text-xs font-medium">· {rejected} need revision</span>}
+            </p>
+            <p className={`text-xs mt-0.5 ${isRed ? "text-red-600" : "text-amber-600"}`}>
+              Review the fields below, then {mode === "admin-review" ? "approve or request changes above" : "fix red-flagged fields and submit your revision"}.
+            </p>
+          </div>
+        </div>
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${collapsed ? "" : "rotate-180"} ${isRed ? "text-red-400" : "text-amber-400"}`} />
+      </div>
+
+      {!collapsed && (
+        <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2.5">
+          {Object.entries(groups).map(([sectionLabel, items]) => (
+            <div key={sectionLabel}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${isRed ? "text-red-600" : "text-amber-600"}`}>
+                {sectionLabel}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {items.map(fc => (
+                  <span
+                    key={fc.path}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      fc.status === "rejected"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : fc.status === "approved"
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : "bg-amber-100 text-amber-700 border-amber-200"
+                    }`}
+                  >
+                    {fc.status === "rejected" ? "✕" : fc.status === "approved" ? "✓" : "~"} {fc.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Publish Status Card ──────────────────────────────────────────────────────
 
 function PublishStatusCard({
@@ -639,6 +728,9 @@ function PublishStatusCard({
   onPublish: () => void;
   onRequestApproval: () => void;
 }) {
+  // In review mode, publish actions are controlled via the top-nav Approve/Request Changes buttons
+  const { mode: reviewMode } = useReviewMode();
+  const isReadOnly = !!reviewMode;
   const map: Record<PublishStatus, {
     color: string; bg: string; border: string;
     Icon: React.ElementType; label: string; desc: string;
@@ -659,30 +751,33 @@ function PublishStatusCard({
             <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
           </div>
         </div>
-        <div className="shrink-0">
-          {publishStatus === "draft" && (
-            <button
-              type="button"
-              onClick={onRequestApproval}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              <Zap className="w-3 h-3" /> Request Publish
-            </button>
-          )}
-          {publishStatus === "pending_approval" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 bg-white border border-teal-200 rounded-lg">
-              <Clock className="w-3 h-3" /> Under Review
-            </span>
-          )}
-          {publishStatus === "published" && (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
-            >
-              <ExternalLink className="w-3 h-3" /> View Live Site
-            </button>
-          )}
-        </div>
+        {/* Publish action — hidden in review mode (handled by top-nav Approve All) */}
+        {!isReadOnly && (
+          <div className="shrink-0">
+            {publishStatus === "draft" && (
+              <button
+                type="button"
+                onClick={onRequestApproval}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors"
+              >
+                <Zap className="w-3 h-3" /> Request Publish
+              </button>
+            )}
+            {publishStatus === "pending_approval" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 bg-white border border-teal-200 rounded-lg">
+                <Clock className="w-3 h-3" /> Under Review
+              </span>
+            )}
+            {publishStatus === "published" && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" /> View Live Site
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {publishStatus === "published" && (
@@ -701,8 +796,60 @@ function PublishStatusCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function DomainManagementPage() {
-  const [domains, setDomains]               = useState<Domain[]>(INITIAL_DOMAINS);
-  const [publishStatus, setPublishStatus]   = useState<PublishStatus>("draft");
+  const { clinic } = useClinic();
+  const { mode: reviewMode, fieldChanges } = useReviewMode();
+
+  // Changes that affect this step: domain slug, custom website URL, integrations,
+  // and SEO (meta tags affect how the published domain is indexed).
+  // footerConfig / navLinks / navConfig are website *content* — they belong in
+  // Website Builder (step 2), not here.
+  const domainPageChanges = useMemo(() => {
+    if (!reviewMode) return [];
+    return fieldChanges.filter(fc =>
+      fc.path.startsWith("general.slug")    ||
+      fc.path.startsWith("contact.website") ||
+      fc.path.startsWith("integrations")    ||
+      fc.path.startsWith("seo")
+    );
+  }, [reviewMode, fieldChanges]);
+
+  // Build initial domain list from clinic context so review sessions show
+  // submission-specific slugs and custom domains instead of hardcoded values.
+  const initialDomains = useMemo<Domain[]>(() => {
+    const slug         = clinic.general.slug?.trim() || "your-clinic";
+    const rawWebsite   = clinic.contact.website?.trim() || "";
+    const customDomain = rawWebsite.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const subDomain    = `${slug}.vetcms.io`;
+
+    const domains: Domain[] = [];
+    if (customDomain) {
+      domains.push({
+        id: "d1",
+        hostname: customDomain,
+        isPrimary: true,
+        status: "active",
+        ssl: "active",
+        dns: "verified",
+        addedAt: "Mar 12, 2026",
+      });
+    }
+    domains.push({
+      id: "d2",
+      hostname: subDomain,
+      isPrimary: !customDomain,
+      status: "active",
+      ssl: "active",
+      dns: "verified",
+      addedAt: "Mar 10, 2026",
+    });
+    return domains;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only compute on mount — subsequent domain edits are local state
+
+  const [domains, setDomains]               = useState<Domain[]>(initialDomains);
+  const [publishStatus, setPublishStatus]   = useState<PublishStatus>(
+    clinic.status === "published" ? "published" : "draft"
+  );
   const [addWizardOpen, setAddWizardOpen]   = useState(false);
   const [multiDomainNote, setMultiDomainNote] = useState(true);
 
@@ -740,13 +887,22 @@ export function DomainManagementPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900">Domain & Publishing</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Manage custom domains and control your site's publish status.</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {clinic.general.name
+                ? <><span className="font-medium text-slate-700">{clinic.general.name}</span> — manage custom domains and publish status.</>
+                : "Manage custom domains and control your site's publish status."}
+            </p>
           </div>
           <div className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${publishStatus === "published" ? "bg-emerald-500 animate-pulse" : publishStatus === "pending_approval" ? "bg-blue-400 animate-pulse" : "bg-amber-400"}`} />
             <span className="text-xs text-slate-500 font-medium capitalize">{publishStatus.replace("_", " ")}</span>
           </div>
         </div>
+
+        {/* ── Review-mode changes banner ── */}
+        {reviewMode && domainPageChanges.length > 0 && (
+          <DomainReviewBanner changes={domainPageChanges} mode={reviewMode} />
+        )}
 
         {/* ── Publish status card ── */}
         <PublishStatusCard
@@ -778,13 +934,16 @@ export function DomainManagementPage() {
               <h2 className="text-sm font-bold text-slate-800">Domains</h2>
               <p className="text-[11px] text-slate-400">{domains.length} domain{domains.length !== 1 ? "s" : ""} connected</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setAddWizardOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-600 bg-white border border-teal-600/30 rounded-lg hover:bg-teal-600/5 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add Domain
-            </button>
+            {/* Add Domain — hidden in review mode */}
+            {!reviewMode && (
+              <button
+                type="button"
+                onClick={() => setAddWizardOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-600 bg-white border border-teal-600/30 rounded-lg hover:bg-teal-600/5 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Domain
+              </button>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -885,8 +1044,8 @@ export function DomainManagementPage() {
 
       </div>
 
-      {/* Add Domain Wizard */}
-      {addWizardOpen && (
+      {/* Add Domain Wizard — never shown in review mode */}
+      {!reviewMode && addWizardOpen && (
         <AddDomainWizard
           onClose={() => setAddWizardOpen(false)}
           onAdd={handleAddDomain}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Type, Tags, MapPin, Clock,
   CheckCircle2, Save, ChevronRight,
@@ -16,6 +16,8 @@ import { FooterPoliciesSection } from "./sections/FooterPoliciesSection";
 import { WebsiteMigrationPanel, type ImportPayload } from "./WebsiteMigrationPanel";
 import type { WeekSchedule } from "./ui/OperatingHoursEditor";
 import { useClinic } from "../../context/ClinicContext";
+import { useReviewMode } from "../../context/ReviewModeContext";
+import type { FieldChange } from "../../lib/approval/diffGenerator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,87 @@ const SECTIONS: {
 ];
 
 const STICKY_BAR_HEIGHT = 57; // px — height of the sticky save bar
+
+// ─── Review-mode helpers ──────────────────────────────────────────────────────
+
+/**
+ * Maps a FieldChange.section/path prefix → HospitalSetup SectionId.
+ * Context-specific fields (seo, nav, integrations, footerConfig, hours)
+ * don't come from the ClinicWebsite diff so we match by path prefix too.
+ */
+function getChangeSectionId(fc: FieldChange): SectionId | null {
+  const p = fc.path;
+  if (p.startsWith("general")      || fc.section === "general")       return "basic";
+  if (p.startsWith("taxonomy")     || fc.section === "taxonomy")       return "taxonomy";
+  if (p.startsWith("contact")      || fc.section === "contact")        return "contact";
+  if (p.startsWith("hours")        || p.startsWith("businessHours"))   return "hours";
+  if (p.startsWith("services")     || fc.section === "services"
+   || p.startsWith("servicesConfig"))                                   return "services";
+  if (p.startsWith("veterinarian") || fc.section === "veterinarians"
+   || p.startsWith("vetsConfig"))                                       return "vets";
+  if (p.startsWith("integrations"))                                     return "integrations";
+  // Only actual footer-config fields belong in the Footer & Policies section.
+  // navLinks, navConfig, seo → Website Builder step only (shown in RightPanel banners).
+  if (p.startsWith("footerConfig") || p.startsWith("footer"))          return "footer";
+  return null;
+}
+
+/** Amber/red chip strip shown above a section's content in review mode. */
+function ReviewSectionBanner({ changes }: { changes: FieldChange[] }) {
+  const pending  = changes.filter((c) => c.status === "pending");
+  const rejected = changes.filter((c) => c.status === "rejected");
+
+  if (changes.length === 0) return null;
+
+  return (
+    <div
+      className={[
+        "mb-5 flex items-start gap-2.5 px-3.5 py-3 rounded-xl border",
+        rejected.length > 0
+          ? "bg-red-50 border-red-200"
+          : "bg-amber-50 border-amber-200",
+      ].join(" ")}
+    >
+      {/* icon */}
+      <div className={`mt-0.5 shrink-0 ${rejected.length > 0 ? "text-red-500" : "text-amber-500"}`}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-[11px] font-semibold mb-2 ${rejected.length > 0 ? "text-red-800" : "text-amber-800"}`}>
+          {changes.length === 1
+            ? "1 field changed in this submission"
+            : `${changes.length} fields changed in this submission`}
+          {rejected.length > 0 && (
+            <span className="ml-1.5 text-red-600">· {rejected.length} need{rejected.length === 1 ? "s" : ""} revision</span>
+          )}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {changes.map((fc) => (
+            <span
+              key={fc.path}
+              className={[
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                fc.status === "rejected"
+                  ? "bg-red-100 text-red-700 border-red-200"
+                  : fc.status === "approved"
+                  ? "bg-green-100 text-green-700 border-green-200"
+                  : "bg-amber-100 text-amber-700 border-amber-200",
+              ].join(" ")}
+            >
+              {fc.status === "rejected" ? "✕" : fc.status === "approved" ? "✓" : "~"}{" "}
+              {fc.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Completion heuristics ────────────────────────────────────────────────────
 
@@ -171,6 +254,21 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
   const [activeSection, setActiveSection] = useState<SectionId>("basic");
   const [lastSaved, setLastSaved]         = useState<Date | null>(null);
   const [migrationOpen, setMigrationOpen] = useState(false);
+
+  // Review mode — field-level change awareness
+  const { mode: reviewMode, fieldChanges } = useReviewMode();
+
+  // Per-section change map — used for sidebar badges + section banners
+  const sectionChangeMap = useMemo<Partial<Record<SectionId, FieldChange[]>>>(() => {
+    if (!reviewMode) return {};
+    const out: Partial<Record<SectionId, FieldChange[]>> = {};
+    for (const fc of fieldChanges) {
+      const sid = getChangeSectionId(fc);
+      if (!sid) continue;
+      (out[sid] ??= []).push(fc);
+    }
+    return out;
+  }, [reviewMode, fieldChanges]);
 
   const sectionRefs      = useRef<(HTMLElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
@@ -373,8 +471,12 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
         <nav className="flex-1 px-3 py-3 overflow-y-auto min-h-0" aria-label="Setup sections">
           <ul className="flex flex-col gap-0.5" role="list">
             {SECTIONS.map((section, index) => {
-              const isActive = section.id === activeSection;
-              const isDone   = isSectionComplete(section.id, form);
+              const isActive  = section.id === activeSection;
+              const isDone    = isSectionComplete(section.id, form);
+              const secChanges = sectionChangeMap[section.id] ?? [];
+              const pendingCount  = secChanges.filter((c) => c.status === "pending").length;
+              const rejectedCount = secChanges.filter((c) => c.status === "rejected").length;
+              const hasReviewChanges = secChanges.length > 0;
 
               return (
                 <li key={section.id}>
@@ -387,7 +489,9 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
                       "transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600",
                       isActive
                         ? "bg-blue-50/80 text-teal-600"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                        : hasReviewChanges
+                          ? "text-gray-600 hover:bg-amber-50/60 hover:text-gray-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                     ].join(" ")}
                   >
                     {/* Step number / check icon */}
@@ -409,7 +513,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
                       )}
                     </span>
 
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden min-w-0">
                       <p
                         className={[
                           "text-xs font-semibold truncate",
@@ -423,20 +527,31 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
                       </p>
                     </div>
 
-                    <span className="ml-auto shrink-0">
-                      {isActive && (
-                        <ChevronRight
-                          className="w-3.5 h-3.5 text-teal-600"
-                          aria-hidden="true"
-                        />
+                    {/* Review-mode change badges */}
+                    <div className="ml-auto flex items-center gap-1 shrink-0">
+                      {rejectedCount > 0 && (
+                        <span
+                          className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 rounded-full"
+                          title={`${rejectedCount} field${rejectedCount > 1 ? "s" : ""} need revision`}
+                        >
+                          {rejectedCount}
+                        </span>
                       )}
-                      {isDone && !isActive && (
-                        <CheckCircle2
-                          className="w-3 h-3 text-green-500"
-                          aria-hidden="true"
-                        />
+                      {pendingCount > 0 && (
+                        <span
+                          className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-full"
+                          title={`${pendingCount} pending change${pendingCount > 1 ? "s" : ""}`}
+                        >
+                          {pendingCount}
+                        </span>
                       )}
-                    </span>
+                      {!hasReviewChanges && isActive && (
+                        <ChevronRight className="w-3.5 h-3.5 text-teal-600" aria-hidden="true" />
+                      )}
+                      {!hasReviewChanges && isDone && !isActive && (
+                        <CheckCircle2 className="w-3 h-3 text-green-500" aria-hidden="true" />
+                      )}
+                    </div>
                   </button>
                 </li>
               );
@@ -444,23 +559,25 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
           </ul>
         </nav>
 
-        {/* Import from existing site CTA */}
-        <div className="px-3 pb-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setMigrationOpen(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-teal-600/30 bg-teal-600/[0.03] hover:bg-teal-600/[0.07] hover:border-teal-600/50 transition-all group"
-          >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-600 to-[#0369A1] flex items-center justify-center shrink-0">
-              <Zap className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-xs font-semibold text-teal-600 leading-tight">Import from existing site</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Auto-fill from your live website</p>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-teal-600/50 group-hover:text-teal-600 transition-colors" />
-          </button>
-        </div>
+        {/* Import from existing site CTA — hidden in review mode */}
+        {!reviewMode && (
+          <div className="px-3 pb-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setMigrationOpen(true)}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-dashed border-teal-600/30 bg-teal-600/[0.03] hover:bg-teal-600/[0.07] hover:border-teal-600/50 transition-all group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-600 to-[#0369A1] flex items-center justify-center shrink-0">
+                <Zap className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-xs font-semibold text-teal-600 leading-tight">Import from existing site</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Auto-fill from your live website</p>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-teal-600/50 group-hover:text-teal-600 transition-colors" />
+            </button>
+          </div>
+        )}
 
         {/* Save timestamp */}
         <div className="px-4 py-2 border-t border-gray-100 shrink-0">
@@ -472,8 +589,8 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
         </div>
       </aside>
 
-      {/* ── Migration panel overlay ── */}
-      {migrationOpen && (
+      {/* ── Migration panel overlay — hidden in review mode ── */}
+      {!reviewMode && migrationOpen && (
         <WebsiteMigrationPanel
           onClose={() => setMigrationOpen(false)}
           onImport={handleImport}
@@ -500,6 +617,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Basic Information"
               description="Name, slug, brand colours & logo"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["basic"] ?? []} />
             <BasicInfoSection data={form.basic} onChange={patchBasic} />
           </section>
 
@@ -514,6 +632,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Clinic Type & Pets"
               description="Hospital type & species treated"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["taxonomy"] ?? []} />
             <TaxonomySection data={form.taxonomy} onChange={patchTaxonomy} />
           </section>
 
@@ -528,6 +647,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Location & Contact"
               description="Address, phone & email"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["contact"] ?? []} />
             <ContactSection data={form.contact} onChange={patchContact} />
           </section>
 
@@ -542,6 +662,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Operating Hours"
               description="Weekly availability schedule"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["hours"] ?? []} />
             <OperatingHoursSection value={form.hours} onChange={patchHours} />
           </section>
 
@@ -556,6 +677,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Available Services"
               description="Services offered at this location"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["services"] ?? []} />
             <ServicesSection
               data={clinic.servicesConfig}
               onChange={updateServicesConfig}
@@ -573,6 +695,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Veterinarians"
               description="Team members at this location"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["vets"] ?? []} />
             <VetsSection
               data={clinic.vetsConfig}
               onChange={updateVetsConfig}
@@ -590,6 +713,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Integrations"
               description="Tracking, chatbots & consent management"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["integrations"] ?? []} />
             <IntegrationsSection
               data={clinic.integrations}
               onChange={updateIntegrations}
@@ -607,6 +731,7 @@ export function HospitalSetupPage({ onNext, hideLeftPanel = false }: HospitalSet
               label="Footer & Policies"
               description="Links, newsletter subscription & legal pages"
             />
+            <ReviewSectionBanner changes={sectionChangeMap["footer"] ?? []} />
             <FooterPoliciesSection
               data={clinic.footerConfig}
               onChange={updateFooterConfig}
