@@ -1,27 +1,27 @@
 /**
- * Changes Summary Card
- * Displays a compact summary of changes for a pending approval
- * Shows "5 fields changed" breakdown by section with feedback indicators
+ * ChangesSummaryCard
+ * Compact submission row shown in the Approval Flow list.
+ * "Draft" button signals parent to expand the DraftPanel inline.
  */
 
-import React, { useState } from "react";
-import { ChevronDown, ChevronUp, MessageSquare, AlertCircle } from "lucide-react";
-import { ChangeGroupSummary, ApprovalFeedback } from "../../context/ApprovalContext";
+import { FileText, MessageSquare, Clock, ExternalLink } from "lucide-react";
+import type { ChangeGroupSummary } from "../../context/ApprovalContext";
 
 interface ChangesSummaryCardProps {
-  clinicName: string;
-  submittedBy: string;
-  submittedAt: string;
+  clinicName:    string;
+  submittedBy:   string;
+  submittedAt:   string;
   changesSummary: ChangeGroupSummary[];
   feedbackCount: number;
   diffStats: {
-    totalChanged: number;
-    bySection: Record<string, number>;
-    createdItems: number;
-    deletedItems: number;
+    totalChanged:  number;
+    bySection:     Record<string, number>;
+    createdItems:  number;
+    deletedItems:  number;
   };
-  onViewDetails: () => void;
-  /** Opens the full-screen review page (editor with field highlights) */
+  /** True when the DraftPanel for this card is currently open */
+  isDraftOpen?:      boolean;
+  onViewDraft:       () => void;
   onReviewInEditor?: () => void;
 }
 
@@ -29,112 +29,108 @@ export function ChangesSummaryCard({
   clinicName,
   submittedBy,
   submittedAt,
-  changesSummary,
-  feedbackCount,
   diffStats,
-  onViewDetails,
+  feedbackCount,
+  changesSummary,
+  isDraftOpen = false,
+  onViewDraft,
   onReviewInEditor,
 }: ChangesSummaryCardProps) {
-  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+
+  // Section pill summary — max 4 shown inline
+  const activeSections = changesSummary.filter(g => g.changeCount > 0);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition cursor-pointer group">
-      {/* Header Row */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          {/* Clinic Name + Status */}
-          <div className="flex items-center gap-2.5 mb-2">
-            <h3 className="text-sm font-medium text-gray-900">{clinicName}</h3>
-            <span className="px-2 py-0.5 text-xs font-medium rounded bg-amber-50 text-amber-700">
-              Pending Review
+    <div
+      className="bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-all"
+    >
+      <div className="px-5 py-4 flex items-start justify-between gap-4">
+
+        {/* Left: clinic info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <span className="text-sm font-semibold text-gray-900">{clinicName}</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wider">
+              Pending
             </span>
             {feedbackCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-red-50 text-red-700">
-                <AlertCircle size={12} />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">
+                <MessageSquare className="w-2.5 h-2.5" aria-hidden="true" />
                 {feedbackCount} feedback
               </span>
             )}
           </div>
 
-          {/* Submission Info */}
-          <div className="flex flex-wrap gap-5 text-xs text-gray-600 mb-3">
-            <div>Submitted by {submittedBy}</div>
-            <div>{submittedAt}</div>
+          {/* Submitted by + date */}
+          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-gray-400" aria-hidden="true" />
+              {submittedAt}
+            </span>
+            <span>by <span className="font-medium text-gray-700">{submittedBy}</span></span>
           </div>
 
-          {/* Change Summary */}
-          <div className="flex items-baseline gap-2 mb-3">
-            <p className="text-sm font-medium text-gray-900">
-              {diffStats.totalChanged} field{diffStats.totalChanged !== 1 ? "s" : ""} changed
-            </p>
+          {/* Stats + section pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-gray-700">
+              {diffStats.totalChanged} change{diffStats.totalChanged !== 1 ? "s" : ""}
+            </span>
             {diffStats.createdItems > 0 && (
-              <span className="text-xs text-green-600">+{diffStats.createdItems} created</span>
+              <span className="text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+                +{diffStats.createdItems} added
+              </span>
             )}
             {diffStats.deletedItems > 0 && (
-              <span className="text-xs text-red-600">-{diffStats.deletedItems} deleted</span>
+              <span className="text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+                −{diffStats.deletedItems} removed
+              </span>
+            )}
+            {activeSections.slice(0, 4).map(g => (
+              <span
+                key={g.sectionKey}
+                className="text-[10px] text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-full"
+              >
+                {g.section}
+              </span>
+            ))}
+            {activeSections.length > 4 && (
+              <span className="text-[10px] text-gray-400">
+                +{activeSections.length - 4} more
+              </span>
             )}
           </div>
-
-          {/* Expandable Breakdown by Section */}
-          {isBreakdownExpanded && (
-            <div className="bg-gray-50 rounded-md p-4 mb-4 space-y-3 border border-gray-200">
-              {changesSummary.map((group) => (
-                <div key={group.sectionKey} className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-700">{group.section}</span>
-                  <div className="flex items-center gap-3">
-                    {group.createdCount > 0 && (
-                      <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                        +{group.createdCount} added
-                      </span>
-                    )}
-                    {group.updatedCount > 0 && (
-                      <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-1 rounded">
-                        ~{group.updatedCount} updated
-                      </span>
-                    )}
-                    {group.deletedCount > 0 && (
-                      <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                        -{group.deletedCount} removed
-                      </span>
-                    )}
-                    {group.changeCount === 0 && (
-                      <span className="text-xs text-gray-500">No changes</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Actions Column */}
-        <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+
+          {/* Draft — toggles the inline diff panel */}
           <button
-            onClick={(e) => { e.stopPropagation(); setIsBreakdownExpanded(!isBreakdownExpanded); }}
-            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
-            title={isBreakdownExpanded ? "Hide change breakdown" : "Show change breakdown"}
-            aria-label={isBreakdownExpanded ? "Hide breakdown" : "Show breakdown"}
-            aria-expanded={isBreakdownExpanded}
+            type="button"
+            onClick={e => { e.stopPropagation(); onViewDraft(); }}
+            className={[
+              "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1",
+              isDraftOpen
+                ? "bg-teal-600 text-white border-teal-600 hover:bg-teal-700"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300",
+            ].join(" ")}
+            aria-expanded={isDraftOpen}
+            aria-label={`${isDraftOpen ? "Close" : "Open"} draft for ${clinicName}`}
           >
-            {isBreakdownExpanded ? (
-              <ChevronUp size={18} />
-            ) : (
-              <ChevronDown size={18} />
-            )}
+            <FileText className="w-3.5 h-3.5" aria-hidden="true" />
+            Draft
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
-            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
-            aria-label={`View diff for ${clinicName}`}
-          >
-            View Diff
-          </button>
+
+          {/* Review in Editor */}
           {onReviewInEditor && (
             <button
-              onClick={(e) => { e.stopPropagation(); onReviewInEditor(); }}
-              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
-              aria-label={`Review in editor for ${clinicName}`}
+              type="button"
+              onClick={e => { e.stopPropagation(); onReviewInEditor(); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1"
+              aria-label={`Review ${clinicName} in editor`}
             >
+              <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
               Review in Editor
             </button>
           )}

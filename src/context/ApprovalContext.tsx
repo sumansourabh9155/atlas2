@@ -12,6 +12,7 @@ import {
   groupChangesBySection,
   getChangeStats,
 } from "../lib/approval/diffGenerator";
+import { buildNavLinkDiff, buildBlockDiff } from "../lib/approval/navBlockDiff";
 
 // Re-export for components to use
 export type { FieldChange, ChangeGroupSummary };
@@ -27,7 +28,7 @@ export interface ClinicVersion {
   createdBy: string; // user ID
   createdAt: string; // ISO timestamp
   changes: ClinicWebsite; // full clinic snapshot
-  status: "draft" | "pending_review" | "approved" | "rejected";
+  status: "draft" | "pending_review" | "approved" | "rejected" | "needs_revision";
   requestedAt?: string; // when submitted for approval
   approvalNotes?: string; // Admin feedback
   approvedBy?: string; // Admin user ID
@@ -99,6 +100,8 @@ interface ApprovalContextType {
   submitForApproval: (clinicId: string, changes: ClinicWebsite, userId: string) => void;
   approveChanges: (versionId: string, feedback: string, userId: string) => void;
   rejectChanges: (versionId: string, feedback: string, userId: string) => void;
+  /** Soft rejection: sends feedback to the clinic so they can revise and resubmit */
+  requestRevision: (versionId: string, feedback: string, userId: string) => void;
   publishVersion: (versionId: string) => void;
   getPendingCount: () => number;
   getDiffSummary: (oldVersion: ClinicWebsite, newVersion: ClinicWebsite) => string[];
@@ -273,6 +276,35 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const requestRevision = useCallback(
+    (versionId: string, feedback: string, userId: string) => {
+      setState((prevState) => {
+        const newWorkflows = new Map(prevState.workflows);
+
+        for (const workflow of newWorkflows.values()) {
+          if (workflow.pendingApproval?.id === versionId) {
+            workflow.pendingApproval.status = "needs_revision";
+            workflow.pendingApproval.approvedBy = userId;
+            workflow.pendingApproval.approvalNotes = feedback;
+            workflow.approvalHistory.push(workflow.pendingApproval);
+            workflow.pendingApproval = undefined;
+          }
+        }
+
+        const pendingApprovals = Array.from(newWorkflows.values()).flatMap(
+          (w) => w.pendingApproval ? [w.pendingApproval] : []
+        );
+
+        return {
+          ...prevState,
+          workflows: newWorkflows,
+          pendingApprovals,
+        } as ApprovalState;
+      });
+    },
+    []
+  );
+
   const publishVersion = useCallback((versionId: string) => {
     setState((prevState) => {
       const newWorkflows = new Map(prevState.workflows);
@@ -334,10 +366,20 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
         compareVersion = (historyVersion || draftVersion) as ClinicWebsite | null;
       }
 
-      // Generate deep diff
-      const fieldChanges = generateDeepDiff(compareVersion, changes);
+      // Generate deep diff for schema fields (general, taxonomy, contact, services, vets, blocks)
+      const schemaChanges = generateDeepDiff(compareVersion, changes);
+
+      // Granular diffs for context-only array fields (navLinks, blocks)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cv = compareVersion as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nv = changes as any;
+      const navChanges   = buildNavLinkDiff(cv?.navLinks,  nv?.navLinks);
+      const blockChanges = buildBlockDiff(cv?.blocks,      nv?.blocks);
+
+      const fieldChanges   = [...schemaChanges, ...navChanges, ...blockChanges];
       const changesSummary = groupChangesBySection(fieldChanges);
-      const diffStats = getChangeStats(fieldChanges);
+      const diffStats      = getChangeStats(fieldChanges);
 
       const newVersion: ClinicVersionV2 = {
         id: versionId,
@@ -511,7 +553,7 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
       const workflow = state.workflows.get(clinicId);
       const history = workflow?.approvalHistory ?? [];
       const lastByUser = [...history].reverse().find((h) => h.createdBy === userId);
-      if (lastByUser?.status === "rejected") return "rejected";
+      if (lastByUser?.status === "rejected" || lastByUser?.status === "needs_revision") return "rejected";
 
       return "idle";
     },
@@ -525,6 +567,7 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }) {
     submitForApproval,
     approveChanges,
     rejectChanges,
+    requestRevision,
     publishVersion,
     getPendingCount,
     getDiffSummary,

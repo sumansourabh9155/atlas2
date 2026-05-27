@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useReviewMode } from "../../context/ReviewModeContext";
 import {
   Pencil, Globe, GripVertical, Eye, EyeOff, ChevronDown,
   Sparkles, Link2, LayoutGrid, MapPin, Trophy, Users, MessageSquare,
@@ -389,6 +390,8 @@ interface AccordionSectionProps {
   children: React.ReactNode;
   /** Optional action button rendered next to the eye toggle (e.g. delete for dynamic sections) */
   extraAction?: React.ReactNode;
+  /** True when this section has submitted changes pending review */
+  hasChanges?: boolean;
 }
 
 function AccordionSection({
@@ -396,20 +399,24 @@ function AccordionSection({
   isOpen, isVisible, onToggle, onToggleVisible,
   isDragging, isDragOver, dragOverPos,
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
-  children, extraAction,
+  children, extraAction, hasChanges = false,
 }: AccordionSectionProps) {
+  // Disable drag-and-drop reordering in review mode
+  const { mode: reviewMode } = useReviewMode();
+  const disableDrag = !!reviewMode;
+
   return (
     <>
       {/* Drop indicator ABOVE */}
-      {isDragOver && dragOverPos === "before" && <DropIndicator />}
+      {!disableDrag && isDragOver && dragOverPos === "before" && <DropIndicator />}
 
       <div
-        draggable
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onDragEnd={onDragEnd}
+        draggable={!disableDrag}
+        onDragStart={disableDrag ? undefined : onDragStart}
+        onDragOver={disableDrag ? undefined : onDragOver}
+        onDragLeave={disableDrag ? undefined : onDragLeave}
+        onDrop={disableDrag ? undefined : onDrop}
+        onDragEnd={disableDrag ? undefined : onDragEnd}
         className={[
           "relative border-b border-gray-100 last:border-b-0 transition-all duration-150",
           !isVisible ? "opacity-40" : "",
@@ -440,15 +447,17 @@ function AccordionSection({
           onKeyDown={(e) => e.key === "Enter" && onToggle()}
           aria-expanded={isOpen}
         >
-          {/* Drag handle */}
-          <div
-            className="shrink-0 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5 rounded hover:bg-gray-100 transition-colors"
-            onMouseDown={(e) => e.stopPropagation()}
-            aria-hidden="true"
-            title="Drag to reorder"
-          >
-            <GripVertical className="w-3.5 h-3.5 text-gray-300 hover:text-gray-400" />
-          </div>
+          {/* Drag handle — hidden in review mode */}
+          {!disableDrag && (
+            <div
+              className="shrink-0 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5 rounded hover:bg-gray-100 transition-colors"
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-hidden="true"
+              title="Drag to reorder"
+            >
+              <GripVertical className="w-3.5 h-3.5 text-gray-300 hover:text-gray-400" />
+            </div>
+          )}
 
           {/* Icon — gray-100 bg, gray-600 icon when open; gray-100 bg, gray-400 when closed */}
           <span
@@ -464,9 +473,20 @@ function AccordionSection({
 
           {/* Text */}
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-semibold leading-tight ${isOpen ? "text-gray-900" : "text-gray-700"}`}>
-              {label}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className={`text-xs font-semibold leading-tight ${isOpen ? "text-gray-900" : "text-gray-700"}`}>
+                {label}
+              </p>
+              {/* Change indicator — shown in review mode when this section has pending changes */}
+              {reviewMode && hasChanges && (
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wide leading-none"
+                  title="This section has submitted changes"
+                >
+                  Changed
+                </span>
+              )}
+            </div>
             {!isOpen && (
               <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">
                 {dataPreview}
@@ -509,7 +529,7 @@ function AccordionSection({
       </div>
 
       {/* Drop indicator BELOW */}
-      {isDragOver && dragOverPos === "after" && <DropIndicator />}
+      {!disableDrag && isDragOver && dragOverPos === "after" && <DropIndicator />}
     </>
   );
 }
@@ -1062,6 +1082,102 @@ interface RightPanelProps {
   onOpenSmartModes?: () => void;
 }
 
+// ─── ReviewEditorBanner ───────────────────────────────────────────────────────
+
+import type { FieldChange } from "../../lib/approval/diffGenerator";
+
+interface ReviewEditorBannerProps {
+  title:   string;
+  changes: FieldChange[];
+  /** Optional grouped display — if provided, shows groups with labels */
+  groups?: { label: string; items: FieldChange[] }[];
+}
+
+function ReviewEditorBanner({ title, changes, groups }: ReviewEditorBannerProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const rejected  = changes.filter(c => c.status === "rejected").length;
+  const isRed     = rejected > 0;
+
+  const chipCls = (fc: FieldChange) =>
+    fc.status === "rejected"
+      ? "bg-red-100 text-red-700 border-red-200"
+      : fc.status === "approved"
+      ? "bg-green-100 text-green-700 border-green-200"
+      : isRed
+      ? "bg-red-50 text-red-700 border-red-200"
+      : "bg-amber-100 text-amber-700 border-amber-200";
+
+  const chipIcon = (fc: FieldChange) =>
+    fc.status === "rejected" ? "✕" : fc.status === "approved" ? "✓" : "~";
+
+  return (
+    <div className={`shrink-0 border-b ${isRed ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
+      {/* Header — click to collapse/expand */}
+      <button
+        type="button"
+        onClick={() => setCollapsed(v => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:opacity-80 transition-opacity"
+      >
+        <span className={`flex-1 text-[10px] font-semibold ${isRed ? "text-red-800" : "text-amber-800"}`}>
+          {changes.length} {title}
+          {rejected > 0 && <span className="ml-1 text-red-600">· {rejected} need revision</span>}
+        </span>
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${collapsed ? "" : "rotate-180"} ${isRed ? "text-red-500" : "text-amber-500"}`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {/* Expanded body — fixed max-height, scrollable, all chips visible via wrap */}
+      {!collapsed && (
+        <div className="relative">
+          {/* Scrollable chip area — capped height so the section list stays usable */}
+          <div className="overflow-y-auto scrollbar-none max-h-[140px] px-3 pb-2.5 space-y-1.5">
+            {groups
+              ? groups.filter(g => g.items.length > 0).map(g => (
+                  <div key={g.label}>
+                    <p className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${isRed ? "text-red-500" : "text-amber-600"}`}>
+                      {g.label}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {g.items.map(fc => (
+                        <span
+                          key={fc.id ?? fc.path}
+                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${chipCls(fc)}`}
+                        >
+                          {chipIcon(fc)} {fc.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              : (
+                <div className="flex flex-wrap gap-1">
+                  {changes.map(fc => (
+                    <span
+                      key={fc.id ?? fc.path}
+                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${chipCls(fc)}`}
+                    >
+                      {chipIcon(fc)} {fc.label}
+                    </span>
+                  ))}
+                </div>
+              )
+            }
+          </div>
+          {/* Bottom fade — signals more content below when overflowing */}
+          <div
+            className={`absolute bottom-0 left-0 right-0 h-5 pointer-events-none ${
+              isRed ? "bg-gradient-to-t from-red-50" : "bg-gradient-to-t from-amber-50"
+            }`}
+            aria-hidden="true"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── RightPanel ───────────────────────────────────────────────────────────────
 
 export function RightPanel({
@@ -1083,6 +1199,51 @@ export function RightPanel({
   onOpenSmartModes,
 }: RightPanelProps) {
   const [tab, setTab] = useState<"editor" | "seo">("editor");
+
+  // ── Review-mode change awareness ─────────────────────────────────────────────
+  const { mode: reviewMode, fieldChanges } = useReviewMode();
+
+  // Group changes by which part of the Website Builder they affect
+  const reviewChanges = useMemo(() => {
+    if (!reviewMode) return { seo: [], nav: [], hero: [], services: [], teams: [], footer: [], blocks: [], all: [] };
+    const seo      = fieldChanges.filter(fc => fc.path.startsWith("seo"));
+    const nav      = fieldChanges.filter(fc => fc.path.startsWith("nav"));
+    const hero     = fieldChanges.filter(fc =>
+      ["general.name", "general.tagline", "general.primaryColor",
+       "general.secondaryColor", "general.logoUrl"].some(p => fc.path.startsWith(p))
+    );
+    const services = fieldChanges.filter(fc =>
+      fc.path.startsWith("servicesConfig") || fc.section === "services"
+    );
+    const teams    = fieldChanges.filter(fc =>
+      fc.path.startsWith("vetsConfig") || fc.section === "veterinarians"
+    );
+    const footer   = fieldChanges.filter(fc =>
+      fc.path.startsWith("footerConfig") || fc.path.startsWith("footer.")
+    );
+    const blocks   = fieldChanges.filter(fc => fc.section === "blocks");
+    const all      = [...nav, ...hero, ...services, ...teams, ...footer, ...blocks];
+    return { seo, nav, hero, services, teams, footer, blocks, all };
+  }, [reviewMode, fieldChanges]);
+
+  /**
+   * Whether a given section accordion has pending block-level changes.
+   * Matches on type-extracted section ID ("hero-0" → "hero") against
+   * block change paths from buildBlockDiff and generateDeepDiff labels.
+   */
+  function sectionHasChanges(sectionId: string): boolean {
+    if (!reviewMode || !reviewChanges.blocks.length) return false;
+    const type = sectionId.replace(/-\d+$/, ""); // "stats-0" → "stats"
+    return reviewChanges.blocks.some(fc => {
+      if (fc.path === `blocks.${type}`)           return true;
+      if (fc.path.startsWith(`blocks.${type}.`))  return true;
+      if (fc.path === `blocks.${sectionId}`)       return true;
+      if (fc.path.startsWith(`blocks.${sectionId}.`)) return true;
+      // generateDeepDiff labels: "Hero Section added" → contains "hero"
+      if (fc.label.toLowerCase().includes(type.toLowerCase())) return true;
+      return false;
+    });
+  }
 
   // ── Local DnD drag state (ephemeral — not needed outside this panel) ─────────
   const [dragSrc, setDragSrc]       = useState<string | null>(null);
@@ -1186,9 +1347,9 @@ export function RightPanel({
     faqState, newsletterState,
   };
 
-  const TABS: { id: "editor" | "seo"; Icon: React.ElementType; label: string }[] = [
-    { id: "editor", Icon: Pencil, label: "Content" },
-    { id: "seo",    Icon: Globe,  label: "SEO"     },
+  const TABS: { id: "editor" | "seo"; Icon: React.ElementType; label: string; badge?: number }[] = [
+    { id: "editor", Icon: Pencil, label: "Content", badge: reviewChanges.all.length  || undefined },
+    { id: "seo",    Icon: Globe,  label: "SEO",     badge: reviewChanges.seo.length  || undefined },
   ];
 
   return (
@@ -1198,7 +1359,7 @@ export function RightPanel({
     >
       {/* ── 2-tab bar ── */}
       <div className="flex items-stretch border-b border-gray-200 h-11 shrink-0 bg-gray-50/50">
-        {TABS.map(({ id, Icon, label }) => (
+        {TABS.map(({ id, Icon, label, badge }) => (
           <button
             key={id} type="button" onClick={() => setTab(id)}
             className={[
@@ -1209,25 +1370,55 @@ export function RightPanel({
           >
             <Icon className="w-3.5 h-3.5" aria-hidden="true" />
             {label}
+            {badge !== undefined && (
+              <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-full">
+                {badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* ── SEO tab ── */}
       {tab === "seo" && (
-        <SEOTab
-          state={seoState}
-          onChange={onSeoChange}
-          clinicName={clinic.general.name}
-          clinic={clinic}
-          heroState={heroState}
-          servicesState={servicesState}
-        />
+        <>
+          {/* Review banner — SEO changes */}
+          {reviewMode && reviewChanges.seo.length > 0 && (
+            <ReviewEditorBanner
+              changes={reviewChanges.seo}
+              title="SEO fields changed in this submission"
+            />
+          )}
+          <SEOTab
+            state={seoState}
+            onChange={onSeoChange}
+            clinicName={clinic.general.name}
+            clinic={clinic}
+            heroState={heroState}
+            servicesState={servicesState}
+          />
+        </>
       )}
 
       {/* ── Content Editor tab ── */}
       {tab === "editor" && (
         <div className="flex-1 flex flex-col overflow-hidden">
+
+          {/* Review banner — content changes */}
+          {reviewMode && reviewChanges.all.length > 0 && (
+            <ReviewEditorBanner
+              changes={reviewChanges.all}
+              groups={[
+                { label: "Navigation",     items: reviewChanges.nav      },
+                { label: "Branding",       items: reviewChanges.hero     },
+                { label: "Services",       items: reviewChanges.services  },
+                { label: "Team",           items: reviewChanges.teams    },
+                { label: "Footer",         items: reviewChanges.footer   },
+                { label: "Page Sections",  items: reviewChanges.blocks   },
+              ]}
+              title="Website content changed in this submission"
+            />
+          )}
 
           {/* Sticky status bar */}
           <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/80">
@@ -1242,7 +1433,9 @@ export function RightPanel({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] text-gray-400 hidden sm:block">Drag to reorder</span>
+              {!reviewMode && (
+                <span className="text-[9px] text-gray-400 hidden sm:block">Drag to reorder</span>
+              )}
               <button
                 type="button" onClick={toggleAllVisible}
                 className="text-[10px] font-medium text-teal-600 hover:underline focus:outline-none"
@@ -1307,6 +1500,7 @@ export function RightPanel({
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, id)}
                     onDragEnd={handleDragEnd}
+                    hasChanges={sectionHasChanges(id)}
                     extraAction={
                       <button
                         type="button"
@@ -1374,6 +1568,7 @@ export function RightPanel({
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, id)}
                   onDragEnd={handleDragEnd}
+                  hasChanges={sectionHasChanges(id)}
                 >
                   {id === "hero" && (
                     <HeroEditor state={heroState} onChange={onHeroChange} primaryColor={primaryColor} />

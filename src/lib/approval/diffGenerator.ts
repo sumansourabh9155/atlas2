@@ -5,6 +5,7 @@
  */
 
 import { ClinicWebsite } from "../../types/clinic";
+import { BLOCK_TYPE_LABELS } from "./navBlockDiff";
 
 export interface FieldChange {
   id: string; // uuid
@@ -403,7 +404,11 @@ function createFieldChange(
   updatedValue: any,
   changeType: "created" | "updated" | "deleted" | "reordered"
 ): FieldChange {
-  const label = FIELD_LABELS[path] || formatPathAsLabel(path);
+  // For block array items, use the block's own type label instead of the index path
+  const isBlockItem = path.match(/^blocks\[\d+\]$/) !== null;
+  const label = isBlockItem
+    ? blockTypeLabel(updatedValue ?? previousValue)
+    : (FIELD_LABELS[path] || formatPathAsLabel(path));
   const humanSummary = generateHumanSummary(label, previousValue, updatedValue, changeType);
 
   return {
@@ -464,9 +469,49 @@ function generateHumanSummary(
  * Format path as human-readable label
  */
 function formatPathAsLabel(path: string): string {
+  // blocks[0].name → look up block type label if we can
+  const blockMatch = path.match(/^blocks\[(\d+)\](.*)$/);
+  if (blockMatch) {
+    const suffix = blockMatch[2]; // e.g. ".isVisible" or ""
+    if (!suffix) return "Page Section";
+    const field = suffix.replace(/^\./, "").replace(/([A-Z])/g, " $1").trim();
+    return `Page Section — ${field}`;
+  }
+
+  // blocks.{blockId} (from navBlockDiff)
+  if (path.startsWith("blocks.")) {
+    const parts = path.split(".");
+    // If it ends in a known field, surface it
+    const last = parts[parts.length - 1];
+    if (last !== "blocks" && isNaN(Number(last))) {
+      return last.replace(/([A-Z])/g, " $1").trim();
+    }
+    return "Page Section";
+  }
+
+  // navLinks.{id}.{field}
+  if (path.startsWith("navLinks.")) {
+    const parts = path.split(".");
+    if (parts.length >= 3) {
+      return parts[parts.length - 1].replace(/([A-Z])/g, " $1").trim();
+    }
+    return "Nav Link";
+  }
+
   const parts = path.split(".");
   const lastPart = parts[parts.length - 1];
   return lastPart.replace(/([A-Z])/g, " $1").replace(/\[.*\]/, "").trim();
+}
+
+/** Resolve a block's type label from its data object */
+function blockTypeLabel(blockData: unknown): string {
+  if (blockData && typeof blockData === "object") {
+    const type = (blockData as Record<string, unknown>).type;
+    if (typeof type === "string") {
+      return BLOCK_TYPE_LABELS[type] ?? `${type.charAt(0).toUpperCase()}${type.slice(1)} Section`;
+    }
+  }
+  return "Page Section";
 }
 
 /**
